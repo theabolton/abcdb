@@ -1,1 +1,4 @@
-abcdb/__pycache__
+db.sqlite3
+abcdb/__pycache__/
+main/__pycache__/
+main/migrations/__pycache__/

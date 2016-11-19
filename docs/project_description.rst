@@ -160,8 +160,8 @@ In order to derive the ‘song’ from an ‘instance’, the ABC is parsed
 then reconstituted in a strict way, with all non-essential metadata
 stripped, lines canonically reordered, and fields normalized. This
 reconstituted ABC is then passed through a cryptographic hash
-function (e.g. MD5 or SHA-1), and the result is considered the
-canonical rendering of the ‘song’ expressed by that instance.
+function (e.g. MD5 or SHA-1), and the resulting digest is considered
+the canonical rendering of the ‘song’ expressed by that instance.
 
 Note that the ‘song’ is just the hash, and exists to group musically
 identical instances. Visual and audio renderings must be made from
@@ -172,13 +172,13 @@ Principal database tables / Django objects:
 .. code:: python
 
   class Song(models.Model):
-      hash = models.CharField(max_length=40, unique=True, db_index=True)
+      digest = models.CharField(max_length=40, unique=True, db_index=True)
 
   class Instance(models.Model):
       # CREATE TABLE song_instance (song_id INTEGER, instance_id INTEGER);
       # CREATE UNIQUE INDEX song_instance_index ON song_instance (song_id, instance_id);
       song = models.ForeignKey(Song, on_delete=models.PROTECT)
-      hash = models.CharField(max_length=40, unique=True, db_index=True)
+      digest = models.CharField(max_length=40, unique=True, db_index=True)
       text = models.TextField()
 
   class Title(models.Model):
