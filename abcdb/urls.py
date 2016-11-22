@@ -16,10 +16,12 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
-from abcdb import views
+from abcdb import views as proj_views
+from main  import views as main_views
 
 
 urlpatterns = [
-    url(r'^$', views.RootView.as_view(), name='root'),
+    url(r'^$', proj_views.RootView.as_view(), name='root'),
     url(r'^admin/', admin.site.urls),
+    url(r'^upload/$', main_views.upload, name='upload'),
 ]
