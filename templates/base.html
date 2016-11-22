@@ -1,0 +1,29 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>abcDB</title>
+    <link rel="stylesheet" href="{% static "css/foundation.css" %}">
+</head>
+<body>
+    <section class="row">
+        <header class="large-12 columns">
+            <h1>Welcome to abcDB</h1>
+            <hr>
+        </header>
+    </section>
+
+    <section class="row">
+
+        <div class="large-1 columns">
+            <p><a href="/admin/">admin</a></p>
+        </div>
+
+        <div class="large-11 columns">
+            {% block content %}{% endblock %}
+        </div>
+
+    </section>
+
+</body>
+</html>

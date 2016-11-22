@@ -3,6 +3,8 @@ from django.test import TestCase
 from .models import Song, Instance, Title, Collection
 
 
+# ====== Model Tests ======
+
 class SongModelTest(TestCase):
     def test_string_representation(self):
         song = Song(digest='0' * 40)
@@ -30,3 +32,11 @@ class CollectionModelTest(TestCase):
     def test_string_representation(self):
         collection = Collection(URL='http://www.smbolton.com/abc.html')
         self.assertEqual(str(collection), collection.URL)
+
+
+# ====== Project Tests ======
+
+class ProjectTests(TestCase):
+    def test_homepage(self):
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)

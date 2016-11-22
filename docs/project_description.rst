@@ -112,7 +112,7 @@ Off-the-shelf technologies that are being used:
   * Python 3
   * Django
   * SQLite3
-  * Zurb Foundation
+  * `Zurb Foundation <http://foundation.zurb.com/>`_
   
 Original software that I have written:
 

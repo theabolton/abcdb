@@ -16,6 +16,10 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 
+from abcdb import views
+
+
 urlpatterns = [
+    url(r'^$', views.RootView.as_view(), name='root'),
     url(r'^admin/', admin.site.urls),
 ]
