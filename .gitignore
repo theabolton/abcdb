@@ -1,3 +1,4 @@
+# it is recommended that django migrations NOT be excluded from commits
 db.sqlite3
 abcdb/__pycache__/
 main/__pycache__/

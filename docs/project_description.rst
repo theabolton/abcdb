@@ -112,6 +112,7 @@ Off-the-shelf technologies that are being used:
   * Python 3
   * Django
   * SQLite3
+  * Zurb Foundation
   
 Original software that I have written:
 
@@ -134,17 +135,17 @@ Original software yet to be written:
 Schema
 ======
 
-An explanation of ‘song’ versus ‘instance’: consider two different
-pieces of ABC notated-music which produce indentical renderings.
-This is possible due to a number of factors which do not affect the
-rendered output:
+To begin, an explanation of ‘song’ versus ‘instance’ will be useful.
+Consider two different pieces of ABC notated-music which produce
+indentical renderings. This is possible due to a number of factors
+which do not affect the rendered output:
 
   * Semantically identical but textually different field values
   * Line re-ordering
   * Differences in encoding, e.g. ISO-8859-1 "Latin-1" vs. UTF-8,
     composed vs. decomposed Unicode, or canonically vs. compatibly
     normalized Unicode
-  * Differences in orthography, e.g. accented characters vs. their
+  * Differences in orthography, e.g. characters with diacritics vs. their
     ASCII reductions, British vs. American spelling, or differences
     in capitalization
   * Differences in whitespace
@@ -230,4 +231,13 @@ Site Map / Hierarchy
     index.html     -- redirects to welcome.html or portfolio.html
     welcome.html   -- welcome page for regular users
     portfolio.html -- introductory page for those evaluating my coding
+
+Shortcomings
+============
+* As it exists now, the system tracks from where a particular ABC
+   instance came, as its 'Collection'. It doesn't keep the original
+   ABC file, nor does it record when the file was imported. The
+   present 'Collection' information is somewhat useful, but ignores
+   the reality that both web resources and local ABC files often
+   change over time.
 
