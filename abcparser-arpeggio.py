@@ -16,15 +16,23 @@ parser = ParserPEG(
    # element !FIX!
    element = stem / WSP
 
-   # stem
-   #   "Notes on a stem" – a more natural name for this would be "chord", but Norbeck used that
-   #   for chord symbols.
-   stem = ('[' note note+ ']') / note
-
    # note
+   # see '4.11 Ties and slurs' and '4.20 Order of abc constructs' for more on ties
    note = pitch note_length? tie?
+   tie = '-'
 
-   # note length
+   # ==== 4.1 Pitch
+
+   pitch = accidental? basenote octave?
+   basenote = r'[A-Ga-g]'
+   octave = r'\\'+' / r',+'
+
+   # ==== 4.2 Accidentals
+
+   accidental = '^^' / '^' / '__' / '_' / '='
+
+   # ==== 4.3 Note lengths
+
    #   Norbeck specified this as "(DIGITS? ('/' DIGITS)?) / '/'+", which could match the empty
    #   string. We need the note_length parser to fail if it doesn't match anything. Things we
    #   need to match include: '2', '/2', '3/2', '/', '//'.
@@ -34,15 +42,13 @@ parser = ParserPEG(
    note_length_full = DIGITS '/' DIGITS
    note_length_slashes = r'/+'
 
-   tie = '-'
+   # ==== 4.17 Chords and unisons
 
-   # pitch
-   pitch = accidental? basenote octave?
-   accidental = '^^' / '^' / '__' / '_' / '='
-   basenote = r'[A-Ga-g]'
-   octave = r'\\'+' / r',+'
+   # Norbeck used "chord" for chord symbols, and "stem" for what the spec calls chords.
+   stem = ('[' note note+ ']') / note
 
-   # utility rules
+   # ==== utility rules
+
    DIGITS = r'\d+'
    WSP = r'[ \t]+'  # whitespace
 
