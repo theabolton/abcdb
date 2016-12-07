@@ -58,9 +58,11 @@ class ABCVisitor(PTNodeVisitor):
         self.abc_debug = kwargs.pop('abc_debug', False)
         super().__init__(*args, **kwargs)
 
+    def print_debug(self, node, children):
+        print(type(node), node.rule_name, node.flat_str(), children)
+
     def visit__default__(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
+        if self.abc_debug: self.print_debug(node, children)
         if isinstance(node, Terminal):
             return node.value
         else:
@@ -69,8 +71,7 @@ class ABCVisitor(PTNodeVisitor):
     # --- node visitors for particular rules, in case-insensitive alphabetical order by rule name
 
     def visit_note_length(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
+        if self.abc_debug: self.print_debug(node, children)
         numerator, denominator = children[0]
         if denominator == 1:
             if numerator == 1:
@@ -88,23 +89,19 @@ class ABCVisitor(PTNodeVisitor):
                 return "%d/%d" % (numerator, denominator)
 
     def visit_note_length_bigger(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
+        if self.abc_debug: self.print_debug(node, children)
         return (int(children[0]), 1)
 
     def visit_note_length_full(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
+        if self.abc_debug: self.print_debug(node, children)
         return (int(children[0]), int(children[2]))
 
     def visit_note_length_slashes(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
+        if self.abc_debug: self.print_debug(node, children)
         return (1, 2**len(node.flat_str()))
 
     def visit_note_length_smaller(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
+        if self.abc_debug: self.print_debug(node, children)
         return (1, int(children[1]))
 
 
