@@ -10,11 +10,16 @@ from arpeggio.cleanpeg import ParserPEG, PTNodeVisitor, visit_parse_tree
 
 
 parser = ParserPEG(
+   # This grammar is based on Henrik Norbeck's ABNF grammar for ABC v2.0, with changes
+   # to make it more compatible with the ABC v2.1 specification. It is roughly ordered
+   # by section of the v2.1 specification. It assumes Unicode encoding.
    """
    line = element+ EOF
 
    # element !FIX!
-   element = stem / WSP
+   element = stem / WSP / chord_or_text
+   # chord-or-text !FIX!
+   chord_or_text = '"' chord '"'
 
    # note
    # see '4.11 Ties and slurs' and '4.20 Order of abc constructs' for more on ties
@@ -47,8 +52,20 @@ parser = ParserPEG(
    # Norbeck used "chord" for chord symbols, and "stem" for what the spec calls chords.
    stem = ('[' note note+ ']') / note
 
-   # ==== utility rules
+   # ==== 4.18 Chord symbols
 
+   # 'non_quote' is a catch-all for non-conforming ABC (in practice, people sometimes confuse the
+   # chord symbol and annotation syntaxes.)
+   chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)? non_quote*
+
+   # the last three here are \u266f sharp symbol, \u266d flat symbol, and \u266e natural symbol
+   chord_accidental = '#' / 'b' / '=' / '♯' / '♭' / '♮'
+
+   # chord type, e.g. m, min, maj7, dim, sus4: "programs should treat chord symbols quite liberally"
+   chord_type = r'[A-Za-z\d+\-]+'
+
+   # ==== utility rules
+   non_quote = r'[^"]'
    DIGITS = r'\d+'
    WSP = r'[ \t]+'  # whitespace
 
