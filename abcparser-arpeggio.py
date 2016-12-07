@@ -11,7 +11,10 @@ from arpeggio.cleanpeg import ParserPEG, PTNodeVisitor, visit_parse_tree
 
 parser = ParserPEG(
    """
-   line = stem+ EOF
+   line = element+ EOF
+
+   # element !FIX!
+   element = stem / WSP
 
    # stem
    #   "Notes on a stem" – a more natural name for this would be "chord", but Norbeck used that
@@ -22,13 +25,13 @@ parser = ParserPEG(
    note = pitch note_length? tie?
 
    # note length
-   #   Norbeck specified this as "(digits? ('/' digits)?) / '/'+", which could match the empty
+   #   Norbeck specified this as "(DIGITS? ('/' DIGITS)?) / '/'+", which could match the empty
    #   string. We need the note_length parser to fail if it doesn't match anything. Things we
    #   need to match include: '2', '/2', '3/2', '/', '//'.
    note_length = note_length_smaller / note_length_full / note_length_bigger / note_length_slashes
-   note_length_bigger = digits+  # digits is already greedy, but this avoids an optimization (bug?)
-   note_length_smaller = '/' digits
-   note_length_full = digits '/' digits
+   note_length_bigger = DIGITS+  # DIGITS is already greedy, but this avoids an optimization (bug?)
+   note_length_smaller = '/' DIGITS
+   note_length_full = DIGITS '/' DIGITS
    note_length_slashes = r'/+'
 
    tie = '-'
@@ -40,7 +43,8 @@ parser = ParserPEG(
    octave = r'\\'+' / r',+'
 
    # utility rules
-   digits = r'\d+'
+   DIGITS = r'\d+'
+   WSP = r'[ \t]+'  # whitespace
 
    """,  # --- end of grammar ---
 
@@ -104,6 +108,9 @@ class ABCVisitor(PTNodeVisitor):
         if self.abc_debug: self.print_debug(node, children)
         return (1, int(children[1]))
 
+    def visit_WSP(self, node, children):
+        if self.abc_debug: self.print_debug(node, children)
+        return ' '
 
 if __name__ == '__main__':
     import pprint
