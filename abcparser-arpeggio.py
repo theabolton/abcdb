@@ -66,25 +66,7 @@ class ABCVisitor(PTNodeVisitor):
         else:
             return ''.join(children)
 
-    def visit_note_length_bigger(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
-        return (int(children[0]), 1)
-
-    def visit_note_length_smaller(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
-        return (1, int(children[1]))
-
-    def visit_note_length_full(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
-        return (int(children[0]), int(children[2]))
-
-    def visit_note_length_slashes(self, node, children):
-        if self.abc_debug:
-            print(type(node), node.rule_name, node.flat_str(), children)
-        return (1, 2**len(node.flat_str()))
+    # --- node visitors for particular rules, in case-insensitive alphabetical order by rule name
 
     def visit_note_length(self, node, children):
         if self.abc_debug:
@@ -104,6 +86,26 @@ class ABCVisitor(PTNodeVisitor):
                 return "/%d" % denominator
             else:
                 return "%d/%d" % (numerator, denominator)
+
+    def visit_note_length_bigger(self, node, children):
+        if self.abc_debug:
+            print(type(node), node.rule_name, node.flat_str(), children)
+        return (int(children[0]), 1)
+
+    def visit_note_length_full(self, node, children):
+        if self.abc_debug:
+            print(type(node), node.rule_name, node.flat_str(), children)
+        return (int(children[0]), int(children[2]))
+
+    def visit_note_length_slashes(self, node, children):
+        if self.abc_debug:
+            print(type(node), node.rule_name, node.flat_str(), children)
+        return (1, 2**len(node.flat_str()))
+
+    def visit_note_length_smaller(self, node, children):
+        if self.abc_debug:
+            print(type(node), node.rule_name, node.flat_str(), children)
+        return (1, int(children[1]))
 
 
 if __name__ == '__main__':
