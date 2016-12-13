@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # https://github.com/igordejanovic/Arpeggio
 # http://igordejanovic.net/Arpeggio/
 
+from __future__ import print_function, unicode_literals
 import codecs
 
 from arpeggio import Terminal
@@ -18,8 +20,7 @@ parser = ParserPEG(
 
    # element !FIX!
    element = stem / WSP / chord_or_text
-   # chord-or-text !FIX!
-   chord_or_text = '"' chord '"'
+   chord_or_text = '"' (chord / text_expression) (chord_newline (chord / text_expression))* '"'
 
    # note
    # see '4.11 Ties and slurs' and '4.20 Order of abc constructs' for more on ties
@@ -55,8 +56,11 @@ parser = ParserPEG(
    # ==== 4.18 Chord symbols
 
    # 'non_quote' is a catch-all for non-conforming ABC (in practice, people sometimes confuse the
-   # chord symbol and annotation syntaxes.)
-   chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)? non_quote*
+   # chord symbol and annotation syntaxes.) Norbeck's grammar let it east everything else between
+   # the quotes; here we use a negative lookahead assert to make sure it doesn't eat a
+   # chord_newline.
+   chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)? \
+               (!chord_newline non_quote)*
 
    # the last three here are \u266f sharp symbol, \u266d flat symbol, and \u266e natural symbol
    chord_accidental = '#' / 'b' / '=' / '♯' / '♭' / '♮'
@@ -64,7 +68,13 @@ parser = ParserPEG(
    # chord type, e.g. m, min, maj7, dim, sus4: "programs should treat chord symbols quite liberally"
    chord_type = r'[A-Za-z\d+\-]+'
 
+   # ==== 4.19 Annotations
+
+   text_expression = ( "^" / "<" / ">" / "_" / "@" ) (!chord_newline non_quote)+
+
    # ==== utility rules
+
+   chord_newline = '\\\\n' / ';'  # from Norbeck; non-standard extension
    non_quote = r'[^"]'
    DIGITS = r'\d+'
    WSP = r'[ \t]+'  # whitespace
@@ -96,6 +106,9 @@ class ABCVisitor(PTNodeVisitor):
             return ''.join(children)
 
     # --- node visitors for particular rules, in case-insensitive alphabetical order by rule name
+
+    def visit_chord_newline(self, node, children):
+        return ';'
 
     def visit_note_length(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
@@ -149,4 +162,6 @@ if __name__ == '__main__':
     v = visit_parse_tree(result, ABCVisitor(abc_debug=True))
     print('==================================================')
     pp.pprint(v)
+    for c in v:
+        print(hex(ord(c)))
 
