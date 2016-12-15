@@ -18,14 +18,16 @@ parser = ParserPEG(
    """
    line = element+ EOF
 
-   # element !FIX!
-   element = stem / WSP / chord_or_text
+   # element !FIX! now only missing 'inline_field'
+   element = broken_rhythm / stem / WSP / chord_or_text / gracing / grace_notes / tuplet /
+             slur_begin / slur_end / rollback / multi_measure_rest / measure_repeat / nth_repeat /
+             end_nth_repeat / unused_char
    chord_or_text = '"' (chord / text_expression) (chord_newline (chord / text_expression))* '"'
+   gracing = '.' / userdef_symbol / long_gracing
+   unused_char = reserved_char / backquote  # !FIX! Norbeck included '$' and '+'
 
    # note
-   # see '4.11 Ties and slurs' and '4.20 Order of abc constructs' for more on ties
    note = pitch note_length? tie?
-   tie = '-'
 
    # ==== 4.1 Pitch
 
@@ -48,6 +50,67 @@ parser = ParserPEG(
    note_length_full = DIGITS '/' DIGITS
    note_length_slashes = r'/+'
 
+   # ==== 4.4 Broken rhythm
+
+   broken_rhythm = stem b_elem* r'[<>]{1,3}' b_elem* stem
+   b_elem = WSP / chord_or_text / gracing / grace_notes / slur_begin / slur_end
+
+   # ==== 4.5 Rests
+
+   multi_measure_rest = r'Z[0-9]*'
+
+   # ==== 4.7 Beams
+
+   backquote = '`'  # used to increase legibility in groups of beamed notes, otherwise meaningless
+
+   # ==== 4.9 First and second repeats
+
+   nth_repeat = '[' ( nth_repeat_num / nth_repeat_text )
+   nth_repeat_num = DIGITS ( ( ',' / '-' ) DIGITS)*
+   nth_repeat_text = '"' *non_quote* '"'  # from Norbeck, not in the standard?
+   end_nth_repeat = ']'
+
+   # ==== 4.11 Ties and slurs
+
+   # see '4.20 Order of abc constructs' for more on ties
+   tie = '-'
+   slur_begin = '('
+   slur_end = ')'
+
+   # ==== 4.12 Grace notes
+
+   # -FIX- Norbeck didn't include broken rhythm here
+   grace_notes = "{" acciaccatura? grace_note_stem+ "}"
+   grace_note_stem = grace_note / ( "[" grace_note grace_note+ "]" )  # from Norbeck; non-standard extension
+   grace_note = pitch note_length?
+   acciaccatura = "/"
+
+   # ==== 4.13 Duplets, triplets, quadruplets, etc.
+
+   # Norbeck included two or more elements as part of the tuplet, but here we'd need to tell the
+   # parser to match as many elements as the value of the first DIGITS.
+   tuplet = '(' DIGITS ( ':' DIGITS? ':' DIGITS? )?
+
+   # ==== 4.14 Decorations
+
+   long_gracing = ( "!" ( gracing1 / gracing2 / gracing3 / gracing4 / gracing_nonstandard ) "!" ) /
+                  ( "!" gracing_catchall "!" )
+   gracing1 = "<(" / "<)" / ">(" / ">)" / "D.C." / "D.S." / "accent" / "arpeggio" / "breath" /
+              "coda" / "crescendo(" / "crescendo)" / "dacapo" / "dacoda" / "diminuendo("
+   gracing2 = "diminuendo)" / "downbow" / "emphasis" / "fermata" / "ffff" / "fff" / "ff" / "fine" /
+              "invertedfermata" / "invertedturnx" / "invertedturn" / "longphrase" / "lowermordent"
+   gracing3 = "mediumphrase" / "mf" / "mordent" / "mp" / "open" / "plus" / "pppp" / "ppp" / "pp" /
+              "pralltriller" / "roll" / "segno" / "sfz" / "shortphrase" / "slide" / "snap"
+   gracing4 = "tenuto" / "thumb" / "trill(" / "trill)" / "trill" / "turnx" / "turn" / "upbow" /
+              "uppermordent" / "wedge" / r'[+0-5<>fp]'
+   gracing_nonstandard = "cresc" / "decresc" / "dimin" / "fp" /
+                         ( "repeatbar" DIGITS )  # non-standard, from Norbeck
+   gracing_catchall = r'[\x22-\x7e]+'  # catch-all for non-standard ABC
+
+   # ==== 4.16 Redefinable symbols
+
+   userdef_symbol = r'[~H-Yh-w]'  # Norbeck includes non-standard 'X' and 'Y'
+
    # ==== 4.17 Chords and unisons
 
    # Norbeck used "chord" for chord symbols, and "stem" for what the spec calls chords.
@@ -59,7 +122,7 @@ parser = ParserPEG(
    # chord symbol and annotation syntaxes.) Norbeck's grammar let it east everything else between
    # the quotes; here we use a negative lookahead assert to make sure it doesn't eat a
    # chord_newline.
-   chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)? \
+   chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)?
                (!chord_newline non_quote)*
 
    # the last three here are \u266f sharp symbol, \u266d flat symbol, and \u266e natural symbol
@@ -72,9 +135,18 @@ parser = ParserPEG(
 
    text_expression = ( "^" / "<" / ">" / "_" / "@" ) (!chord_newline non_quote)+
 
+   # ==== 7.4 Voice overlay
+
+   rollback = '&'
+
+   # ==== 8.1 Tune body
+
+   reserved_char = r'[#\*;\?@]'
+
    # ==== utility rules
 
    chord_newline = '\\\\n' / ';'  # from Norbeck; non-standard extension
+   measure_repeat = r'//?'        # from Norbeck; non-standard extension
    non_quote = r'[^"]'
    DIGITS = r'\d+'
    WSP = r'[ \t]+'  # whitespace
