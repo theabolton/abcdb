@@ -12,22 +12,70 @@ from arpeggio.cleanpeg import ParserPEG, PTNodeVisitor, visit_parse_tree
 
 
 parser = ParserPEG(
-   # This grammar is based on Henrik Norbeck's ABNF grammar for ABC v2.0, with changes
-   # to make it more compatible with the ABC v2.1 specification. It is roughly ordered
-   # by section of the v2.1 specification. It assumes Unicode encoding.
+   # This grammar is based on Henrik Norbeck's ABNF grammar for ABC v2.0, with:
+   #  1) corrections for its mistakes (e.g. rests could not be generated),
+   #  2) rearrangingment of the rules necessary for PEG ordered-choice parsing, and
+   #  3) changes to make it more compatible with the ABC v2.1 specification.
+   # It is roughly ordered by section of the v2.1 specification. It assumes Unicode encoding.
    """
-   line = element+ EOF
+   music_code_line = abc_line EOF
 
-   # element !FIX! now only missing 'inline_field'
+   abc_line = barline / ( barline? element+ (barline element+)* barline? ) abc_eol
+
    element = broken_rhythm / stem / WSP / chord_or_text / gracing / grace_notes / tuplet /
              slur_begin / slur_end / rollback / multi_measure_rest / measure_repeat / nth_repeat /
-             end_nth_repeat / unused_char
+             end_nth_repeat / inline_field / hard_line_break / unused_char
+
    chord_or_text = '"' (chord / text_expression) (chord_newline (chord / text_expression))* '"'
    gracing = '.' / userdef_symbol / long_gracing
-   unused_char = reserved_char / backquote  # !FIX! Norbeck included '$' and '+'
-
-   # note
    note = pitch note_length? tie?
+   unused_char = reserved_char / backquote  # -FIX- Norbeck included '+', should we?
+
+   # ==== 3.1.6 M: - meter
+
+   meter = meter_num / r'[Cc]\\|?' / 'none'
+   meter_num = ( ( '(' WSP* DIGITS (WSP* '+' WSP* DIGITS)* WSP* ')' ) /
+                   ( DIGITS (WSP* '+' WSP* DIGITS)* ) )
+               WSP* '/' WSP* DIGITS
+
+   # ==== 3.1.8 Q: - tempo
+
+   tempo = ( tempo_spec ( WSP+ tempo_desc )? ) / ( tempo_desc ( WSP+ tempo_spec )? )
+   tempo_spec = ( note_length_strict '=' DIGITS ) / ( r'[Cc]' note_length? '=' DIGITS ) / DIGITS
+   tempo_desc = '"' non_quote* '"'
+
+   # ==== 3.1.14 K: - key
+
+   key = ( key_def ( WSP+ clef )? ) / clef / 'HP' / 'Hp'
+   key_def = basenote r'[#b♯♭]'? ( WSP* mode )? ( WSP ( WSP* global_accidental )+ )*
+   mode = major / lydian / ionian / mixolydian / dorian / aeolian / phrygian / locrian / minor /
+          'exp'
+   major = 'maj' ('o' 'r'?)?
+   lydian = 'lyd' ('i' ('a' ('n')?)?)?
+   ionian = 'ion' ('i' ('a' ('n')?)?)?
+   mixolydian = 'mix' ('o' ('l' ('y' ('d' ('i' ('a' ('n')?)?)?)?)?)?)?
+   dorian = 'dor' ('i' ('a' ('n')?)?)?
+   aeolian = 'aeo' ('l' ('i' ('a' ('n')?)?)?)?
+   phrygian = 'phr' ('y' ('g' ('i' ('a' ('n')?)?)?)?)?
+   locrian = 'loc' ('r' ('i' ('a' ('n')?)?)?)?
+   minor = 'm' ('in' ('o' 'r'?)?)?
+   global_accidental = accidental basenote
+
+   # ==== 3.2 Use of fields within the tune body
+
+   inline_field = ifield_text / ifield_key / ifield_length / ifield_meter / ifield_part /
+                  ifield_tempo / ifield_userdef / ifield_voice
+   ifield_text = r'\\[[INRr]:[^\\]]+\\]'
+   ifield_key = '[K:' WSP* ( 'none' / key? ) ']'
+   ifield_length = '[L:' WSP* note_length_strict ']'
+   ifield_meter = '[M:' WSP* meter ']'
+   # -FIX- define ABC2.1 'm:' macro field
+   # ifield_part: 'P:' fields are supposed to be very structured (see 3.1.9), but in the wild, they
+   # are frequently abused. Accept any non-']' text:
+   ifield_part = r'\\[P:[^\\]]+\\]'
+   ifield_tempo = '[Q:' WSP* tempo ']'
+   ifield_userdef = r'\\[U:[^\\]]+\\]'
+   ifield_voice = '[V:' WSP* voice ']'
 
    # ==== 4.1 Pitch
 
@@ -41,14 +89,17 @@ parser = ParserPEG(
 
    # ==== 4.3 Note lengths
 
-   #   Norbeck specified this as "(DIGITS? ('/' DIGITS)?) / '/'+", which could match the empty
-   #   string. We need the note_length parser to fail if it doesn't match anything. Things we
-   #   need to match include: '2', '/2', '3/2', '/', '//'.
+   # Norbeck specified this as "(DIGITS? ('/' DIGITS)?) / '/'+", which could match the empty
+   # string. We need the note_length parser to fail if it doesn't match anything. Things we
+   # need to match include: '2', '/2', '3/2', '/', '//'.
    note_length = note_length_smaller / note_length_full / note_length_bigger / note_length_slashes
    note_length_bigger = DIGITS+  # DIGITS is already greedy, but this avoids an optimization (bug?)
    note_length_smaller = '/' DIGITS
    note_length_full = DIGITS '/' DIGITS
    note_length_slashes = r'/+'
+
+   # used by various fields
+   note_length_strict = ( DIGITS '/' DIGITS ) / '1'
 
    # ==== 4.4 Broken rhythm
 
@@ -57,18 +108,43 @@ parser = ParserPEG(
 
    # ==== 4.5 Rests
 
+   rest = r'[xyz]' note_length?
    multi_measure_rest = r'Z[0-9]*'
+
+   # ==== 4.6 Clefs and transposition
+
+   clef = ( clef_spec / clef_middle / clef_transpose / clef_octave / clef_stafflines )
+          ( WSP+ clef )?
+   clef_spec = ( ( 'clef=' ( clef_note / clef_name ) ) / clef_name ) clef_line? ( '+8' / '-8' )?
+          ( WSP+ clef_middle )?
+   clef_note = 'G' / 'C' / 'F' / 'P'  # non-standard, from Norbeck
+   clef_name = 'treble' / 'alto' / 'tenor' / 'bass' / 'perc' / 'none'
+   clef_line = r'[1-5]'
+   clef_middle = 'middle=' basenote octave?
+   clef_transpose = 'transpose=' '-'? DIGITS
+   clef_octave = 'octave=' '-'? DIGITS
+   clef_stafflines = 'stafflines=' DIGITS
 
    # ==== 4.7 Beams
 
    backquote = '`'  # used to increase legibility in groups of beamed notes, otherwise meaningless
 
+   # ==== 4.8 Repeat/bar symbols
+
+   barline = invisible_barline / ( ':'* '['? ( '.'? '|' )+ ( ']' / ':'+ / nth_repeat_num )? ) /
+             double_repeat_barline / dashed_barline
+   invisible_barline = '[|]' / '[]'  # second is non-standard, from Norbeck
+   double_repeat_barline = '::'
+   dashed_barline = ':'  # non-standard, from Norbeck
+
    # ==== 4.9 First and second repeats
 
    nth_repeat = '[' ( nth_repeat_num / nth_repeat_text )
    nth_repeat_num = DIGITS ( ( ',' / '-' ) DIGITS)*
-   nth_repeat_text = '"' *non_quote* '"'  # from Norbeck, not in the standard?
+   nth_repeat_text = '"' non_quote* '"'  # from Norbeck, not in the standard?
    end_nth_repeat = ']'
+
+   # ==== 4.10 Variant endings -- see 4.8 Repeat/bar symbols
 
    # ==== 4.11 Ties and slurs
 
@@ -79,7 +155,8 @@ parser = ParserPEG(
 
    # ==== 4.12 Grace notes
 
-   # -FIX- Norbeck didn't include broken rhythm here
+   # -FIX- Norbeck didn't include broken rhythm here, and I haven't yet implemented it. I have seen
+   # it in the wild, though rarely.
    grace_notes = "{" acciaccatura? grace_note_stem+ "}"
    grace_note_stem = grace_note / ( "[" grace_note grace_note+ "]" )  # from Norbeck; non-standard extension
    grace_note = pitch note_length?
@@ -93,6 +170,7 @@ parser = ParserPEG(
 
    # ==== 4.14 Decorations
 
+   # -FIX- 'I:decoration +' could change '!' to '+'
    long_gracing = ( "!" ( gracing1 / gracing2 / gracing3 / gracing4 / gracing_nonstandard ) "!" ) /
                   ( "!" gracing_catchall "!" )
    gracing1 = "<(" / "<)" / ">(" / ">)" / "D.C." / "D.S." / "accent" / "arpeggio" / "breath" /
@@ -114,7 +192,7 @@ parser = ParserPEG(
    # ==== 4.17 Chords and unisons
 
    # Norbeck used "chord" for chord symbols, and "stem" for what the spec calls chords.
-   stem = ('[' note note+ ']') / note
+   stem = ('[' note note+ ']') / note / rest
 
    # ==== 4.18 Chord symbols
 
@@ -125,15 +203,28 @@ parser = ParserPEG(
    chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)?
                (!chord_newline non_quote)*
 
-   # the last three here are \u266f sharp symbol, \u266d flat symbol, and \u266e natural symbol
+   # the last three here are \\u266f sharp symbol, \\u266d flat symbol, and \\u266e natural symbol
    chord_accidental = '#' / 'b' / '=' / '♯' / '♭' / '♮'
 
    # chord type, e.g. m, min, maj7, dim, sus4: "programs should treat chord symbols quite liberally"
-   chord_type = r'[A-Za-z\d+\-]+'
+   chord_type = r'[A-Za-z\\d+\\-]+'
 
    # ==== 4.19 Annotations
 
    text_expression = ( "^" / "<" / ">" / "_" / "@" ) (!chord_newline non_quote)+
+
+   # ==== 6.1.1 Typesetting linebreaks
+
+   # this would include comments, if we did not strip them already:
+   abc_eol = line_continuation? WSP*
+   line_continuation = '\\\\'
+
+   # -FIX- this could be changed by a 'I:linebreak' field:
+   hard_line_break = '$' / '!'
+
+   # ==== 7. Multiple voices
+
+   voice = r'[^ \\]]+' ( WSP+ r'[^ =\\]]+' '=' ( ( '"' non_quote* '"' ) / r'[^ \\]]+' ) )*
 
    # ==== 7.4 Voice overlay
 
@@ -141,21 +232,21 @@ parser = ParserPEG(
 
    # ==== 8.1 Tune body
 
-   reserved_char = r'[#\*;\?@]'
+   reserved_char = r'[#\\*;\\?@]'
 
    # ==== utility rules
 
    chord_newline = '\\\\n' / ';'  # from Norbeck; non-standard extension
    measure_repeat = r'//?'        # from Norbeck; non-standard extension
    non_quote = r'[^"]'
-   DIGITS = r'\d+'
-   WSP = r'[ \t]+'  # whitespace
+   DIGITS = r'\\d+'
+   WSP = r'[ \\t]+'  # whitespace
 
    """,  # --- end of grammar ---
 
    # " ' '''  # compensate for jed's borken syntax highlighting
 
-   'line',  # default rule
+   'music_code_line',  # default rule
    ws='',   # don't eat whitespace
    memoization=True,
    debug=False
