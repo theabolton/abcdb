@@ -3,6 +3,10 @@
 import codecs
 import re
 
+import arpeggio
+
+from .abcparser_peg import canonify_music_code
+
 
 class Tune(object):
     """A Tune instance holds one ABC tune, including both the raw tune, or 'instance', as found
@@ -248,7 +252,11 @@ class Parser(object):
 
     def handle_music_code(self, tune, line, comment):
         tune.full_tune_append(line + comment)
-        tune.digest_append('body', line)  # !FIX! PEG it! -- visitor will apply decode_abc_text_string() where needed
+        try:
+            line = canonify_music_code(line, text_string_handler=decode_abc_text_string)
+        except arpeggio.NoMatch as err:
+            self.log('warn', 'Music code failed to parse', str(err))
+        tune.digest_append('body', line)
 
 
     def parse(self, filehandle, collection):

@@ -256,6 +256,7 @@ parser = ParserPEG(
 class ABCVisitor(PTNodeVisitor):
     def __init__(self, *args, **kwargs):
         self.abc_debug = kwargs.pop('abc_debug', False)
+        self.text_string_handler = kwargs.pop('text_string_handler', None)
         super().__init__(*args, **kwargs)
 
     def print_debug(self, node, children):
@@ -310,6 +311,12 @@ class ABCVisitor(PTNodeVisitor):
     def visit_WSP(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
         return ' '
+
+
+def canonify_music_code(line, text_string_handler=None):
+    parse_tree = parser.parse(line)
+    return visit_parse_tree(parse_tree, ABCVisitor(text_string_handler=text_string_handler))
+
 
 if __name__ == '__main__':
     import pprint
