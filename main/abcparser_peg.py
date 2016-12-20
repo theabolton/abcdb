@@ -256,7 +256,7 @@ parser = ParserPEG(
 class ABCVisitor(PTNodeVisitor):
     def __init__(self, *args, **kwargs):
         self.abc_debug = kwargs.pop('abc_debug', False)
-        self.text_string_handler = kwargs.pop('text_string_handler', None)
+        self.text_string_decoder = kwargs.pop('text_string_decoder', None)
         super().__init__(*args, **kwargs)
 
     def print_debug(self, node, children):
@@ -273,6 +273,14 @@ class ABCVisitor(PTNodeVisitor):
 
     def visit_chord_newline(self, node, children):
         return ';'
+
+    def visit_ifield_text(self, node, children):
+        text = node.value
+        # If this inline information field is a N:notes, R:rhythm, or r:remark field,
+        # decode its text string. All other (legal) inline information field are ASCII.
+        if text[1:2] in 'NRr' and self.text_string_decoder:
+            text = self.text_string_decoder(text)
+        return text
 
     def visit_note_length(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
@@ -308,14 +316,20 @@ class ABCVisitor(PTNodeVisitor):
         if self.abc_debug: self.print_debug(node, children)
         return (1, int(children[1]))
 
+    def visit_text_expression(self, node, children):
+        text = ''.join(children)
+        if self.text_string_decoder:
+            text = self.text_string_decoder(text)
+        return text
+
     def visit_WSP(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
         return ' '
 
 
-def canonify_music_code(line, text_string_handler=None):
+def canonify_music_code(line, text_string_decoder=None):
     parse_tree = parser.parse(line)
-    return visit_parse_tree(parse_tree, ABCVisitor(text_string_handler=text_string_handler))
+    return visit_parse_tree(parse_tree, ABCVisitor(text_string_decoder=text_string_decoder))
 
 
 if __name__ == '__main__':
