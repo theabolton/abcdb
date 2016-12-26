@@ -427,6 +427,7 @@ class Parser(object):
 
             if re.match(rb'^\s*%', line):  # comment line
                 if self.state in ('tuneheader', 'tunebody'):
+                    line = line.expandtabs()
                     line = self.decode_abc_text_string(self.decode_from_raw(line))
                     tune.full_tune_append(line)
                 else:
@@ -450,13 +451,20 @@ class Parser(object):
 
             # ==== above here, ``line`` is bytes ====
 
+            # expand tabs, if any
+            if b'\t' in line:
+                line = line.expandtabs()
+
             # remove comment, if any
-            line, comment = split_off_comment(line)
-            line = self.decode_from_raw(line)
-            if comment:
-                comment = ' ' + self.decode_from_raw(comment)
+            if b'%' in line:
+                line, comment = split_off_comment(line)
+                if comment:
+                    comment = ' ' + self.decode_from_raw(comment)
+                else:
+                    comment = ''
             else:
                 comment = ''
+            line = self.decode_from_raw(line)
 
             # ==== below here, everything is str ====
 
@@ -496,6 +504,10 @@ class Parser(object):
 
             if last_field_type == 'H':  # history continuation without '+:' (deprecated)
                 if self.state in ('tuneheader', 'tunebody'):
+                    if line.startswith('   '):
+                        line = ' ' + line.lstrip()
+                    else:
+                        line = line.lstrip()
                     tune.full_tune_append('+:' + line + comment)
                 else:
                     assert(False)  # this should be unreachable
