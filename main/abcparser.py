@@ -33,7 +33,7 @@ class Tune(object):
         r = 'X: ' + str(self.X) + '\n'
         r += ''.join(['T: %s\n' % x for x in self.T])
         r += ''.join(['F| %s\n' % x for x in self.full_tune])
-        self.digest.sort(key=lambda l: l['sort'])
+        self.sort_digest()
         for l in self.digest:
             r += 'D| %s %s\n' % (l['sort'], l['line'])
         return r
@@ -62,12 +62,8 @@ class Tune(object):
         self.digest.append({ 'sort': key, 'line': line})
 
 
-    def process(self):
-        """This is called when a complete tune has been accumulated by the parser. It is assumed
-        that the caller will override this function with one that can e.g. save the tune to a
-        database.
-        """
-        print(self)
+    def sort_digest(self):
+        self.digest.sort(key=lambda l: l['sort'])
 
 
 ABC_CHARACTER_MNEMONICS = {
@@ -222,17 +218,15 @@ def split_off_comment(line):
 
 
 class Parser(object):
-    """The Parser class encapsulates an ABC parser. After instantiating the parser, invoke
-    ``.parse()`` with a file-like argument:
+    """A base class for the ABC parser. Subclass this, overriding the ``process_tune`` and ``log``
+    abstract methods. Then, instantiate the parser and invoke ``parse`` with a file-like argument:
 
     >>> p = Parser()
-    >>> p.parse(open('file.abc', 'rb'), collection='file.abc')
+    >>> p.parse(open('file.abc', 'rb'))
 
-    For each individual tune parsed, ``.parse()`` will create a ``Tune`` instance and invoke
-    ``Tune.process()`` on it. Information about the parsing process is logged using
-    ``Parser.log()``, a default implementation of which is provided here to simply print logging
-    information. It is expected that most applications will override ``.log()`` with an
-    implementation of their own.
+    For each individual tune parsed, ``parse`` will create a ``Tune`` instance and invoke the
+    subclass' ``process_tune`` on it. Information about the parsing process is logged using
+    ``log``.
     """
 
     def __init__(self):
@@ -278,7 +272,7 @@ class Parser(object):
 
 
     def log(self, severity, message, text):
-        """A simple print()-based logger for the parser.
+        """Abstract method for logging the status and results of a parse run.
 
         Parameters
         ----------
@@ -289,9 +283,14 @@ class Parser(object):
         text : str or bytes
             Usually, the input which caused the log event.
         """
-        if isinstance(text, bytes):
-            text = text.decode('utf-8', errors='backslashreplace')
-        print(severity + ' | ' + str(self.line_number) + ' | ' + message + ' | ' + text)
+        raise NotImplementedError
+
+
+    def process_tune(self, tune):
+        """Abstract method called when a complete ``Tune`` has been accumulated by the parser. This
+        method should e.g. save the tune to a database.
+        """
+        raise NotImplementedError
 
 
     def handle_encoding(self, line):
@@ -397,17 +396,18 @@ class Parser(object):
         tune.digest_append('body', line)
 
 
-    def parse(self, filehandle, collection):
+    def parse(self, filehandle):
         last_field_type = None  # for '+:' field continuations
         tune = Tune()
         while True:
-            line = filehandle.readline()
+            line = filehandle.readline(2048)  # limit the amount read -- 2k should be enough
             if line == b'':  # end-of-file
                 if self.state in ('tuneheader', 'tunebody'):
                     self.log('warn', 'Unexpected end of file inside tune', '')
                     tune.full_tune_append('')
                     tune.digest_append('body', '')
-                    tune.process()
+                    tune.sort_digest()
+                    self.process_tune(tune)
                 break
             self.line_number += 1
 
@@ -440,7 +440,8 @@ class Parser(object):
                 if self.state in ('tuneheader', 'tunebody'):
                     tune.full_tune_append('')
                     tune.digest_append('body', '')
-                    tune.process()
+                    tune.sort_digest()
+                    self.process_tune(tune)
                     del tune
                     tune = Tune()
                 else:
@@ -528,7 +529,17 @@ class Parser(object):
 
 if __name__ == '__main__':
     import sys
-    p = Parser()
+
+    class CLIParser(Parser):
+        def process_tune(self, tune):
+            print(tune)
+        def log(self, severity, message, text):
+            """A simple print()-based logger for the parser."""
+            if isinstance(text, bytes):
+                text = text.decode('utf-8', errors='backslashreplace')
+            print(severity + ' | ' + str(self.line_number) + ' | ' + message + ' | ' + text)
+
+    p = CLIParser()
     for fn in sys.argv[1:]:
         try:
             fh = open(fn, 'rb')
@@ -537,5 +548,5 @@ if __name__ == '__main__':
         except:
             raise
 
-        p.parse(fh, collection=fn)
+        p.parse(fh)
         fh.close()
