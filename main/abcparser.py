@@ -21,7 +21,7 @@ class Tune(object):
         self.line_number = 0  # The line number in the input file at which this tune started.
         self.T = []           # A list of titles, in order of appearance, including mis-used P
                               # fields.
-        self.digest = []      # The canonicized song, containing only those header fields which
+        self.canonical = []   # The canonicized song, containing only those header fields which
                               # effect the music itself (K, L, M, m, P, U, and V), plus the body
                               # of the tune (music code) with the following stripped: comments,
                               # stylesheet directives, and (non-inline) fields other than K, L,
@@ -33,8 +33,8 @@ class Tune(object):
         r = 'X: ' + str(self.X) + '\n'
         r += ''.join(['T: %s\n' % x for x in self.T])
         r += ''.join(['F| %s\n' % x for x in self.full_tune])
-        self.sort_digest()
-        for l in self.digest:
+        self.sort_canonical()
+        for l in self.canonical:
             r += 'D| %s %s\n' % (l['sort'], l['line'])
         return r
 
@@ -44,11 +44,11 @@ class Tune(object):
         self.full_tune.append(line)
 
 
-    def digest_append(self, field, line):
-        # The ``sort`` field is constructed so that self.digest will sort() into the canonical
+    def canonical_append(self, field, line):
+        # The ``sort`` field is constructed so that self.canonical will sort() into the canonical
         # field ordering.
         assert(isinstance(line, str))
-        n = '%06d' % len(self.digest)
+        n = '%06d' % len(self.canonical)
         if field in 'XT':
             key = '1' + field + n
         elif field in 'LMmPUV':
@@ -59,11 +59,11 @@ class Tune(object):
             key = '4' + field + n
         else:
             key = '5_' + n
-        self.digest.append({ 'sort': key, 'line': line})
+        self.canonical.append({ 'sort': key, 'line': line})
 
 
-    def sort_digest(self):
-        self.digest.sort(key=lambda l: l['sort'])
+    def sort_canonical(self):
+        self.canonical.sort(key=lambda l: l['sort'])
 
 
 ABC_CHARACTER_MNEMONICS = {
@@ -353,9 +353,9 @@ class Parser(object):
 
     def handle_field_K_key_signature(self, tune, line, comment):
         if self.state == 'tuneheader':
-            tune.digest_append('K', line)
+            tune.canonical_append('K', line)
         else:  # tunebody
-            tune.digest_append('body', line)
+            tune.canonical_append('body', line)
         tune.full_tune_append(line + comment)
 
 
@@ -379,11 +379,12 @@ class Parser(object):
     def handle_field_other(self, tune, field_type, line, comment):
         if field_type in 'ABCDEFGHNORrSTWwZ':  # 'abc text string' fields
             line = self.decode_abc_text_string(line)
-        # if the "field_type in 'KLM...'" check fails, this is a field we don't want in the digest
+        # if the "field_type in 'KLM...'" check fails, this is a field we don't want in the
+        # canonical version
         if self.state == 'tuneheader' and field_type in 'KLMmPUV':
-            tune.digest_append(field_type, line)
+            tune.canonical_append(field_type, line)
         elif self.state == 'tunebody' and field_type in 'KLMmPsUVWw':
-            tune.digest_append('body', line)
+            tune.canonical_append('body', line)
         tune.full_tune_append(line + comment)
 
 
@@ -393,7 +394,7 @@ class Parser(object):
             line = canonify_music_code(line, text_string_decoder=self.decode_abc_text_string)
         except arpeggio.NoMatch as err:
             self.log('warn', 'Music code failed to parse', str(err))
-        tune.digest_append('body', line)
+        tune.canonical_append('body', line)
 
 
     def parse(self, filehandle):
@@ -405,8 +406,8 @@ class Parser(object):
                 if self.state in ('tuneheader', 'tunebody'):
                     self.log('warn', 'Unexpected end of file inside tune', '')
                     tune.full_tune_append('')
-                    tune.digest_append('body', '')
-                    tune.sort_digest()
+                    tune.canonical_append('body', '')
+                    tune.sort_canonical()
                     self.process_tune(tune)
                 break
             self.line_number += 1
@@ -439,8 +440,8 @@ class Parser(object):
             if line == b'':  # blank line
                 if self.state in ('tuneheader', 'tunebody'):
                     tune.full_tune_append('')
-                    tune.digest_append('body', '')
-                    tune.sort_digest()
+                    tune.canonical_append('body', '')
+                    tune.sort_canonical()
                     self.process_tune(tune)
                     del tune
                     tune = Tune()
