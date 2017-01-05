@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+import abc
 import codecs
 import re
 
-import arpeggio
+from arpeggio import NoMatch
 
 from .abcparser_peg import canonify_music_code
 
@@ -195,6 +196,22 @@ RE_ABC_CHARACTER_ENCODINGS = re.compile(r"""
     """, re.VERBOSE | re.UNICODE)
 
 
+def decode_abc_text_string(text):
+    """Decode ABC character replacements (TeX-style mnemonics, named HTML entities, or
+    \\uxxxx or \\Uxxxxxxxx escapes)."""
+    def decode(match):
+        m = match.group(0)
+        if m.startswith('&'):  # HTML named entity
+            return ABC_NAMED_ENTITIES.get(m) or m
+        elif len(m) in (6, 10):  # \uxxxx or \Uxxxxxxxx escape
+            return codecs.decode(match.group(0), "unicode_escape")
+        elif len(m) == 3:  # \xx TeX-style mnemonic
+            return ABC_CHARACTER_MNEMONICS.get(m) or m
+        else:  # \\ escaped backslash
+            return '\\'
+    return RE_ABC_CHARACTER_ENCODINGS.sub(decode, text)
+
+
 def split_off_comment(line):
     """Split a line (of bytes) on the comment character '%', but allow for escaping with '\\%'."""
     def escape(s):
@@ -217,11 +234,11 @@ def split_off_comment(line):
         return line, None
 
 
-class Parser(object):
+class ABCParser(metaclass=abc.ABCMeta):
     """A base class for the ABC parser. Subclass this, overriding the ``process_tune`` and ``log``
     abstract methods. Then, instantiate the parser and invoke ``parse`` with a file-like argument:
 
-    >>> p = Parser()
+    >>> p = MyABCParser()
     >>> p.parse(open('file.abc', 'rb'))
 
     For each individual tune parsed, ``parse`` will create a ``Tune`` instance and invoke the
@@ -271,6 +288,7 @@ class Parser(object):
         self.line_number = 0
 
 
+    @abc.abstractmethod
     def log(self, severity, message, text):
         """Abstract method for logging the status and results of a parse run.
 
@@ -283,14 +301,13 @@ class Parser(object):
         text : str or bytes
             Usually, the input which caused the log event.
         """
-        raise NotImplementedError
 
 
+    @abc.abstractmethod
     def process_tune(self, tune):
         """Abstract method called when a complete ``Tune`` has been accumulated by the parser. This
         method should e.g. save the tune to a database.
         """
-        raise NotImplementedError
 
 
     def handle_encoding(self, line):
@@ -321,22 +338,6 @@ class Parser(object):
         self.log('warn', 'Unrecognized character encoding', line)
 
 
-    def decode_abc_text_string(self, text):
-        """Decode ABC character replacements (TeX-style mnemonics, named HTML entities, or
-        \\uxxxx or \\Uxxxxxxxx escapes)."""
-        def decode(match):
-            m = match.group(0)
-            if m.startswith('&'):  # HTML named entity
-                return ABC_NAMED_ENTITIES.get(m) or m
-            elif len(m) in (6, 10):  # \uxxxx or \Uxxxxxxxx escape
-                return codecs.decode(match.group(0), "unicode_escape")
-            elif len(m) == 3:  # \xx TeX-style mnemonic
-                return ABC_CHARACTER_MNEMONICS.get(m) or m
-            else:  # \\ escaped backslash
-                return '\\'
-        return RE_ABC_CHARACTER_ENCODINGS.sub(decode, text)
-
-
     def decode_from_raw(self, raw):
         if self.encoding == 'default':
             # assume that invalid UTF-8 is Latin-1
@@ -360,7 +361,7 @@ class Parser(object):
 
 
     def handle_field_T_title(self, tune, field_data, comment):
-        title = self.decode_abc_text_string(field_data)
+        title = decode_abc_text_string(field_data)
         tune.T.append(title)
         tune.full_tune_append('T:' + title + comment)
 
@@ -378,7 +379,7 @@ class Parser(object):
 
     def handle_field_other(self, tune, field_type, line, comment):
         if field_type in 'ABCDEFGHNORrSTWwZ':  # 'abc text string' fields
-            line = self.decode_abc_text_string(line)
+            line = decode_abc_text_string(line)
         # if the "field_type in 'KLM...'" check fails, this is a field we don't want in the
         # canonical version
         if self.state == 'tuneheader' and field_type in 'KLMmPUV':
@@ -391,8 +392,8 @@ class Parser(object):
     def handle_music_code(self, tune, line, comment):
         tune.full_tune_append(line + comment)
         try:
-            line = canonify_music_code(line, text_string_decoder=self.decode_abc_text_string)
-        except arpeggio.NoMatch as err:
+            line = canonify_music_code(line, text_string_decoder=decode_abc_text_string)
+        except NoMatch as err:
             self.log('warn', 'Music code failed to parse', str(err))
         tune.canonical_append('body', line)
 
@@ -401,7 +402,7 @@ class Parser(object):
         last_field_type = None  # for '+:' field continuations
         tune = Tune()
         while True:
-            line = filehandle.readline(2048)  # limit the amount read -- 2k should be enough
+            line = filehandle.readline(4096)  # limit the amount read -- 4k should be enough
             if line == b'':  # end-of-file
                 if self.state in ('tuneheader', 'tunebody'):
                     self.log('warn', 'Unexpected end of file inside tune', '')
@@ -429,7 +430,7 @@ class Parser(object):
             if re.match(rb'^\s*%', line):  # comment line
                 if self.state in ('tuneheader', 'tunebody'):
                     line = line.expandtabs()
-                    line = self.decode_abc_text_string(self.decode_from_raw(line))
+                    line = decode_abc_text_string(self.decode_from_raw(line))
                     tune.full_tune_append(line)
                 else:
                     self.log('ignore', 'Comment', line)
@@ -531,7 +532,7 @@ class Parser(object):
 if __name__ == '__main__':
     import sys
 
-    class CLIParser(Parser):
+    class CLIParser(ABCParser):
         def process_tune(self, tune):
             print(tune)
         def log(self, severity, message, text):
