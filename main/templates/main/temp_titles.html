@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}ABC Titles{% endblock %}
+
+{% block content %}
+<h3>ABC Titles</h3>
+{% if title_list %}
+    <ul>
+    {% for title in title_list %}
+        <li>{{ title.title }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No titles are available.</p>
+{% endif %}
+
+{% endblock %}

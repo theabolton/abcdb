@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}ABC Songs{% endblock %}
+
+{% block content %}
+<h3>ABC Songs</h3>
+<p>A 'Song' is just a hash used to identify "musically identical" instances. It
+might be nice to be able to list all the instances of a song here.</p>
+
+{% if song_list %}
+    <ul>
+    {% for song in song_list %}
+        <li>{{ song.digest }}</li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No songs are available.</p>
+{% endif %}
+
+{% endblock %}

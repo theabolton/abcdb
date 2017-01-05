@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}ABC Collections{% endblock %}
+
+{% block content %}
+<h3>ABC Collections</h3>
+{% if collection_list %}
+    <ul>
+    {% for collection in collection_list %}
+        <li><a href="/collection/{{ collection.pk }}/">{{ collection.URL }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No collections are available.</p>
+{% endif %}
+
+{% endblock %}

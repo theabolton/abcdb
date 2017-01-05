@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}ABC Instances{% endblock %}
+
+{% block content %}
+<h3>ABC Instances</h3>
+{% if instance_list %}
+    <ul>
+    {% for instance in instance_list %}
+        <li><a href="/instance/{{ instance.pk }}/">{{ instance.digest }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No instances are available.</p>
+{% endif %}
+
+{% endblock %}
