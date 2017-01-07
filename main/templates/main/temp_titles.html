@@ -6,7 +6,7 @@
 {% if title_list %}
     <ul>
     {% for title in title_list %}
-        <li>{{ title.title }}</li>
+        <li><a href="/title/{{ title.pk }}/">{{ title.title }}</a></li>
     {% endfor %}
     </ul>
 {% else %}

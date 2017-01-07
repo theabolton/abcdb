@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block title %}ABC Title{% endblock %}
+
+{% block content %}
+<h3>ABC Title</h3>
+<p>Title: {{ title.title }}</p>
+{% with songs=title.songs %}
+  {% if title.songs %}
+    <p>{{ title.songs.count }} {{ title.songs.count|pluralize:"song has,songs have" }} this title.
+      {% comment -- list songs (not really useful) %}
+      <ul>{% for s in title.songs.all %}<li>{{ s.pk }}&nbsp;-&nbsp;{{ s.digest }}</li>{% endfor %}</ul>
+      {% endcomment %}
+    </p>
+    <p>Song instances having this title:
+    <ul>
+    {% for i in view.song_instances %}<li><a href="/instance/{{ i.pk }}/">{{ i.instance }}</a></li>{% endfor %}
+    </ul>
+    </p>
+  {% else %}
+    <p>No songs were found that match this title.</p>
+  {% endif %}
+{% endwith %}
+{% endblock %}

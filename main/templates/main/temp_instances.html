@@ -6,7 +6,7 @@
 {% if instance_list %}
     <ul>
     {% for instance in instance_list %}
-        <li><a href="/instance/{{ instance.pk }}/">{{ instance.digest }}</a></li>
+        <li><a href="/instance/{{ instance.pk }}/">{{ instance }}</a></li>
     {% endfor %}
     </ul>
 {% else %}

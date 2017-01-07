@@ -5,11 +5,23 @@ from django.shortcuts import render
 from django.utils.html import format_html
 from django.views import generic
 
-from main.forms import UploadForm
+from main.forms import TitleSearchForm, UploadForm
 
 from main.models import Collection, Instance, Song, Title
 from main.abcparser import Tune, ABCParser
 import hashlib, operator
+
+
+# ========== Utility Functions ==========
+
+def _generate_instance_name(instance):
+    """Return a string describing the instance, e.g. 'Instance 3 from new.abc of Song 2 (ab37d30)'"""
+    iname = 'Instance {} '.format(instance.id)
+    collection = Collection.objects.filter(instance=instance.id)
+    if collection:
+        iname += ' from ' + str(collection[0])[:30]
+    iname += ' of ' + str(instance.song)
+    return iname
 
 
 # ========== User-oriented Model Views ==========
@@ -22,6 +34,57 @@ class CollectionView(generic.DetailView):
 class InstanceView(generic.DetailView):
     model = Instance
     template_name = 'main/instance.html'
+
+    def collections(self):
+        """Collections in which this instance was found."""
+        return Collection.objects.filter(instance__id=self.object.pk)
+
+    def other_instances(self):
+        """Other instances of this instance's song, as a list of dicts, available in the template
+        as view.other_instances."""
+        instances = Instance.objects.filter(song__exact=self.object.song_id)
+        context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) }
+                       for i in instances if i.pk != self.object.pk]
+        return context
+
+    def titles(self):
+        """Titles given to this instance's song (all of which may not be present in this
+        instance.)"""
+        return Title.objects.filter(songs=self.object.song)
+
+
+class TitleView(generic.DetailView):
+    model = Title
+    template_name = 'main/title.html'
+
+    def song_instances(self):
+        """Songs given this title, as a list of dicts, available in the template as
+        view.song_instances."""
+        songs = Song.objects.filter(title__id__exact=self.object.pk)
+        instances = Instance.objects.filter(song__in=songs)
+        context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
+        return context
+
+
+# ========== Title Search ==========
+
+def title_search(request):
+    form_class = TitleSearchForm
+
+    if request.method == 'POST':
+        form = form_class(request.POST)
+        if form.is_valid():
+            title = request.POST.get('title')
+            # -FIX- what should be done to sanitize title before using it in a query?
+            query_set = Title.objects.filter(title__icontains=title).order_by('title')
+            return render(request, 'main/title_search-post.html',
+                          { 'results': query_set, 'key': title, 'count': len(query_set) })
+        else:
+            message = ('<div data-alert class="alert-box warning radius">There was a problem '
+                       'getting the search string.</div>')
+            return render(request, 'main/title_search-post.html', { 'error': message, 'form': form })
+
+    return render(request, 'main/title_search.html', { 'form': form_class, })
 
 
 # ========== ABC File Upload View and Parser Subclass ==========

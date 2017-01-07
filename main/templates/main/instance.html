@@ -2,8 +2,34 @@
 {% block title %}ABC Instance{% endblock %}
 
 {% block content %}
-<h3>ABC Instance</h3>
-<p>{{ instance.digest }}</p>
-<p>{{ instance.song }}</p>
-<p>{{ instance.text }}</p>
+<h3>ABC Song Instance {{ instance.id }}</h3>
+{# <p>This is an instance of {{ instance.song }}.</p> #}
+<p>Titles given to this song:
+<ul>
+{% for t in view.titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
+</ul>
+</p>
+{% with instances=view.other_instances %}
+{% if instances %}
+<p>Other instances of this song:
+<ul>
+{% for i in instances %}<li><a href="/instance/{{ i.pk }}/">{{ i.instance }}</a></li>{% endfor %}
+</ul>
+</p>
+{% endif %}
+{% endwith %}
+{% with collections=view.collections %}
+{% if collections %}
+<p>Collections in which this instance occurred:
+<ul>
+{% for c in collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.URL }}</a></li>{% endfor %}
+</ul>
+</p>
+{% endif %}
+{% endwith %}
+<p>ABC text:
+<blockquote>
+{{ instance.text|linebreaks }}
+</blockquote>
+</p>
 {% endblock %}
