@@ -2,8 +2,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>abcDB</title>
+    <title>{% block title %}{% endblock %} – abcDB</title>
     <link rel="stylesheet" href="{% static "css/foundation.css" %}">
+    {% block head %}{% endblock %}
 </head>
 <body>
     <section class="row">
