@@ -1,8 +1,8 @@
 +++++
-abcDB
+ABCdb
 +++++
 
-abcDB is a web-based tool for working with music notated in ABC
+ABCdb is a web-based tool for working with music notated in ABC
 format, providing database, rendering, and analysis functions.
 
 Overview
@@ -62,9 +62,9 @@ challenges:
 .. _tablature: https://en.wikipedia.org/wiki/Tablature
 .. _`ABC standard`: http://abcnotation.com/wiki/abc:standard
 
-The goal of abcDB is to provide an easy means for users to store,
+The goal of ABCdb is to provide an easy means for users to store,
 search, retrieve, and render songs in ABC format. It is my hope that
-abcDB will provide:
+ABCdb will provide:
 
   * A database for storing ABC-format music.
 
