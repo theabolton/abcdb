@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
-{% block title %}ABC Collection{% endblock %}
+{% block title %}Collection {{ collection.id }}{% endblock %}
+{% block headline %}Collection {{ collection.id }}{% endblock %}
 
 {% block content %}
-<h3>ABC Collection</h3>
 <p>Collection URL: {{ collection.URL }}</p>
 {% with instances=collection.instance %}
 {% if instances.count <= 20 %}

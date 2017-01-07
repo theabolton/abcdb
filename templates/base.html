@@ -4,19 +4,20 @@
 <head>
     <title>{% block title %}{% endblock %} – abcDB</title>
     <link rel="stylesheet" href="{% static "css/foundation.css" %}">
+    <style>h1 { font-size: 1.75rem; }</style>
     {% block head %}{% endblock %}
 </head>
 <body>
     <section class="row">
         <header class="large-12 columns">
-            <h1>Welcome to abcDB</h1>
+            <h1>abcDB – {% block headline %}{% endblock %}</h1>
             <hr>
         </header>
     </section>
 
     <section class="row">
 
-        <div class="large-1 columns">
+        <div class="small-4 medium-2 large-2 columns">
             <p>
                 <a href="/admin/">admin</a><br />
                 <a href="/search/">search</a><br />
@@ -28,7 +29,7 @@
             </p>
         </div>
 
-        <div class="large-11 columns">
+        <div class="small-8 medium-10 large-10 columns">
             {% block content %}{% endblock %}
         </div>
 
