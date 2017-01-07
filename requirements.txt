@@ -1,1 +1,2 @@
 Django==1.10.2
+git+git://github.com/igordejanovic/Arpeggio.git@a305f27eb00c8990bdc814d540ef0fa0ad89c9fd#egg=arpeggio
