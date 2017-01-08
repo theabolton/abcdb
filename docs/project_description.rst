@@ -109,14 +109,20 @@ Architecture
 
 Off-the-shelf technologies that are being used:
 
-  * Python 3
-  * Django
-  * SQLite3
-  * `Zurb Foundation <http://foundation.zurb.com/>`_
-  
+  * Python 3.5
+  * Django 1.10
+  * SQLite 3.13.0
+  * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ PEG parser
+  * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ front-end framework
+  * `abcjs 3.0 <https://github.com/paulrosen/abcjs>`_ in-browser ABC renderer
+
 Original software that I have written:
 
-  * Foo.
+  * The ABCdb Django app, including all models, views, forms, and templates
+  * An ABC parser (see below for details)
+  * A parse-tree visitor which reconstitutes the ABC in canonical form, for
+    de-duplication purposes.
+  * As-yet-minimal test coverage.
 
 Off-the-shelf technologies that may be used:
 
@@ -128,8 +134,6 @@ Off-the-shelf technologies that may be used:
 
 Original software yet to be written:
 
-  * Django XXX? glue and logic: classes, methods, templates, etc. to realize the site
-  * original ABC parser and sanitizer
   * code that drives rendering pipeline
 
 Schema
@@ -235,9 +239,45 @@ Site Map / Hierarchy
 Shortcomings
 ============
 * As it exists now, the system tracks from where a particular ABC
-   instance came, as its 'Collection'. It doesn't keep the original
-   ABC file, nor does it record when the file was imported. The
-   present 'Collection' information is somewhat useful, but ignores
-   the reality that both web resources and local ABC files often
-   change over time.
+  instance came, as its 'Collection'. It doesn't keep the original
+  ABC file, nor does it record when the file was imported. The
+  present 'Collection' information is somewhat useful, but ignores
+  the reality that both web resources and local ABC files often
+  change over time.
 
+Licenses
+========
+ABCdb is written and copyrighted by Sean Bolton, and licensed under the
+MIT(Expat) license:
+
+  Copyright © 2017 Sean Bolton.
+
+  Permission is hereby granted, free of charge, to any person obtaining
+  a copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to
+  permit persons to whom the Software is furnished to do so, subject to
+  the following conditions:
+
+  The above copyright notice and this permission notice shall be
+  included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+  LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+  OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Other software used in ABCdb is licensed under the following licenses:
+
+  * Python: Python Software Foundation License
+  * Django: 3-clause BSD license
+  * SQLite3: public domain
+  * Arpeggio PEG parser: MIT(Expat) license
+  * Zurb Foundation: MIT(Expat) license
+  * abcjs: MIT(Expat) license
+
+See the file `LICENSES <../LICENSES>`_ for more information.
