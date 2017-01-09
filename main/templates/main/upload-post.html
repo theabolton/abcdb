@@ -3,7 +3,14 @@
 {% block headline %}Processing Uploaded ABC{% endblock %}
 
 {% block content %}
+<p>Upload processing complete. Found in this upload:<br>
+<ul>
+{% for r in results %}
+<li>{{ r }}</li>
+{% endfor %}
+</ul></p>
+<p>Messages:
 <div style="overflow-y:scroll;height:500px">
 {{ status|safe }}
-</div>
+</div></p>
 {% endblock %}

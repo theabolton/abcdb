@@ -21,9 +21,11 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import collections
+import hashlib
+import operator
 import re
 
-from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.utils.html import format_html
 from django.views import generic
@@ -32,7 +34,6 @@ from main.forms import TitleSearchForm, UploadForm
 
 from main.models import Collection, Instance, Song, Title
 from main.abcparser import Tune, ABCParser
-import hashlib, operator
 
 
 # ========== Utility Functions ==========
@@ -113,10 +114,14 @@ def title_search(request):
 # ========== ABC File Upload View and Parser Subclass ==========
 
 class UploadParser(ABCParser):
+    """Extends ABCParser to save tunes to the database, convert logging information to HTML, and
+    gather statistics."""
     def __init__(self, collection=None):
         super().__init__()
         self.collection = collection
         self.status = ''
+        self.counts = collections.Counter()
+        self.tune_had_warnings = False
 
 
     def process_tune(self, tune):
@@ -129,15 +134,19 @@ class UploadParser(ABCParser):
         song_inst.save()
         if new:
             self.status += format_html("Adding new song {}<br>\n", song_digest[:7])
+            self.counts['new_song'] += 1
         else:
             self.status += format_html("Found existing song {}<br>\n", song_digest[:7])
+            self.counts['existing_song'] += 1
         # save Titles
         for t in tune.T:
             title_inst, new = Title.objects.get_or_create(title=t)
             if new:
                 self.status += format_html("Adding new title '{}'<br>\n", t)
+                self.counts['new_title'] += 1
             else:
                 self.status += format_html("Found existing title '{}'<br>\n", t)
+                self.counts['existing_title'] += 1
             title_inst.songs.add(song_inst)
         # digest the full tune, and save the tune in an Instance
         full_tune = '\n'.join(tune.full_tune)
@@ -148,8 +157,10 @@ class UploadParser(ABCParser):
                                                             text=full_tune)
         if new:
             self.status += format_html("Adding new instance {}<br>\n", tune_digest[:7])
+            self.counts['new_instance'] += 1
         else:
             self.status += format_html("Found existing instance {}<br>\n", tune_digest[:7])
+            self.counts['existing_instance'] += 1
         # save Collection information
         collection_inst, new = Collection.objects.get_or_create(URL=self.collection)
         collection_inst.save()
@@ -158,6 +169,11 @@ class UploadParser(ABCParser):
             self.status += format_html("Adding new collection '{}'<br>\n", self.collection)
         else:
             self.status += format_html("Found existing collection '{}'<br>\n", self.collection)
+        # note warning status
+        if self.instance_had_warnings:
+            self.counts['warning_instance'] +=1
+        else:
+            self.counts['good_instance'] +=1
 
 
     def log(self, severity, message, text):
@@ -166,13 +182,16 @@ class UploadParser(ABCParser):
         if severity == 'warn':
             self.status += format_html("Warning, line {}: {}: {}<br>\n", str(self.line_number),
                                        message, text)
+            self.instance_had_warnings = True
         elif severity == 'info':
             if 'New tune' in message:
                 x = re.sub('\D', '', message) # get tune number
                 self.status += format_html("Found start of new tune #{} at line {}<br>\n",
                                         x, str(self.line_number))
+                self.instance_had_warnings = False
         else:  # severity == 'ignore'
-            print(severity + ' | ' + str(self.line_number) + ' | ' + message + ' | ' + text)
+            #print(severity + ' | ' + str(self.line_number) + ' | ' + message + ' | ' + text)
+            pass
 
 
     def status_append(self, text):
@@ -195,9 +214,21 @@ def upload(request):
             p = UploadParser(collection=file.name)
             p.status_append(status)
             p.parse(file.file)
-            return render(request, 'main/upload-post.html', { 'status': p.get_status() })
+            results = []
+            for key, text in (
+                    ('new_song', '{} new song{}'),
+                    ('existing_song', '{} existing song{}'),
+                    ('new_instance', '{} new song instance{}'),
+                    ('existing_instance', '{} existing song instance{}'),
+                    ('warning_instance', '{} instance{} with warnings'),
+                    ('good_instance', '{} instance{} with no warnings'),
+                    ('new_title', '{} new title{}'),
+                    ('existing_title', '{} existing title{}')):
+                results.append(text.format(p.counts[key], 's' if p.counts[key] != 1 else ''))
+            return render(request, 'main/upload-post.html', { 'results': results,
+                                                              'status': p.get_status() })
         else:
-            # Django 1.10 does not validate file uploads. Handle this anyway.
+            # File uploads are not validated, so this should never be reached. Handle it anyway.
             # form.errors is a dict containing error mesages, keys are field names, values are
             # lists of error message strings.
             status = ('<div data-alert class="alert-box warning radius">The file upload was '
