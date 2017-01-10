@@ -227,7 +227,13 @@ def decode_abc_text_string(text):
         if m.startswith('&'):  # HTML named entity
             return ABC_NAMED_ENTITIES.get(m) or m
         elif len(m) in (6, 10):  # \uxxxx or \Uxxxxxxxx escape
-            return codecs.decode(match.group(0), "unicode_escape")
+            c = int(m[2:], 16)
+            if c == 160:
+                return ' '  # sub regular space for non-breaking-space
+            if c in range(0, 32) or c in range(128, 160):
+                return m    # don't sub control characters
+            else:
+                return codecs.decode(match.group(0), "unicode_escape")
         elif len(m) == 3:  # \xx TeX-style mnemonic
             return ABC_CHARACTER_MNEMONICS.get(m) or m
         else:  # \\ escaped backslash
@@ -255,6 +261,9 @@ def split_off_comment(line):
         return unescape(m.group(1)), unescape(m.group(2))
     else:
         return line, None
+
+
+RE_DECODE_FROM_RAW_CONTROLS = re.compile(r'[\x00-\x1f\x7f-\xa0]')
 
 
 class ABCParser(metaclass=abc.ABCMeta):
@@ -305,7 +314,8 @@ class ABCParser(metaclass=abc.ABCMeta):
         # specifies the ISO-8859-<n> encoding). The ABC specification says that text string
         # encoding defaults to UTF-8, but in the wild, different encodings are often used without
         # being explicity specified in the ABC file. Here the 'default' encoding assumes that any
-        # valid UTF-8 should be UTF-8, and that any invalid UTF-8 is ISO-8859-1 'Latin-1'.
+        # valid UTF-8 should be UTF-8, and that any invalid UTF-8 is Windows-1252 (ISO-8859-1
+        # 'Latin-1' plus some additional commonly-seen characters.)
         self.encoding = 'default'
 
         self.line_number = 0
@@ -363,16 +373,24 @@ class ABCParser(metaclass=abc.ABCMeta):
 
     def decode_from_raw(self, raw):
         if self.encoding == 'default':
-            # assume that invalid UTF-8 is Latin-1
+            # assume that invalid UTF-8 is Windows-1252
             try:
-                return raw.decode('utf-8', errors='strict')
+                unicode = raw.decode('utf-8', errors='strict')
             except:
                 try:
-                    return raw.decode('iso-8859-1', errors='strict')
+                    unicode = raw.decode('cp1252', errors='strict')
                 except:
-                    return raw.decode('utf-8', errors='backslashreplace')
+                    unicode = raw.decode('utf-8', errors='backslashreplace')
         else:
-            return raw.decode(self.encoding, errors='backslashreplace')
+            unicode = raw.decode(self.encoding, errors='backslashreplace')
+        # don't return control codes or non-breaking-space
+        def replacement(match):
+            c = match.group(0)
+            if c == '\xa0':
+                return ' '
+            else:
+                return '\\u{:04x}'.format(ord(c))
+        return RE_DECODE_FROM_RAW_CONTROLS.sub(replacement, unicode)
 
 
     def handle_field_K_key_signature(self, tune, line, comment):
