@@ -160,6 +160,7 @@ class UploadParser(ABCParser):
                 self.counts['existing_title'] += 1
             title_inst.songs.add(song_inst)
         # digest the full tune, and save the tune in an Instance
+        tune.full_tune[0] = 'X:1'  # make X fields all 1 for deduplication
         full_tune = '\n'.join(tune.full_tune)
         tune_digest = hashlib.sha1()
         tune_digest.update(full_tune.encode('utf-8'))
