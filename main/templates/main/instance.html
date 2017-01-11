@@ -37,7 +37,7 @@ ABCJS.renderAbc('notation', song);
 {% if collections %}
 <p>Collections in which this instance occurred:
 <ul>
-{% for c in collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.URL }}</a></li>{% endfor %}
+{% for c in collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.source }}</a></li>{% endfor %}
 </ul>
 </p>
 {% endif %}

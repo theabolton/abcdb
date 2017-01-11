@@ -32,7 +32,7 @@ class SongModelTest(TestCase):
     def test_string_representation(self):
         song = Song(digest='0' * 40)
         song.save()
-        self.assertEqual(str(song), 'Song ' + str(song.id) + ' (' + song.digest[:7] + ')')
+        self.assertEqual(str(song), 'Song ' + str(song.id))
 
 
 class InstanceModelTest(TestCase):
@@ -53,8 +53,8 @@ class TitleModelTest(TestCase):
 
 class CollectionModelTest(TestCase):
     def test_string_representation(self):
-        collection = Collection(URL='http://www.smbolton.com/abc.html')
-        self.assertEqual(str(collection), collection.URL)
+        collection = Collection(source='http://www.smbolton.com/abc.html')
+        self.assertEqual(str(collection), collection.source)
 
 
 # ====== Project Tests ======

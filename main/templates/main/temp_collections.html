@@ -6,7 +6,7 @@
 {% if collection_list %}
     <ul>
     {% for collection in collection_list %}
-        <li><a href="/collection/{{ collection.pk }}/">{{ collection.URL }}</a></li>
+        <li><a href="/collection/{{ collection.pk }}/">{{ collection.source }}</a></li>
     {% endfor %}
     </ul>
 {% else %}

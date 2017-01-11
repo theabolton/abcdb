@@ -25,7 +25,9 @@ import collections
 import hashlib
 import operator
 import re
+import datetime
 
+from django.db import transaction
 from django.shortcuts import render
 from django.utils.html import format_html
 from django.views import generic
@@ -40,11 +42,10 @@ from main.abcparser import Tune, ABCParser
 
 def _generate_instance_name(instance):
     """Return a string describing the instance, e.g. 'Instance 3 from new.abc of Song 2 (ab37d30)'"""
-    iname = 'Instance {} '.format(instance.id)
+    iname = 'Instance {} of Song {}'.format(instance.id, instance.song.id)
     collection = Collection.objects.filter(instance=instance.id)
     if collection:
-        iname += ' from ' + str(collection[0])[:30]
-    iname += ' of ' + str(instance.song)
+        iname += ' from ' + str(collection[0])[:50]
     return iname
 
 
@@ -116,14 +117,24 @@ def title_search(request):
 class UploadParser(ABCParser):
     """Extends ABCParser to save tunes to the database, convert logging information to HTML, and
     gather statistics."""
-    def __init__(self, collection=None):
+    def __init__(self, filename=None):
         super().__init__()
-        self.collection = collection
         self.status = ''
         self.counts = collections.Counter()
         self.tune_had_warnings = False
+        # create Collection
+        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        source = 'upload {} {}'.format(timestamp.strftime('%Y/%m/%d %H:%M:%S'),
+                                       filename or 'no filename')
+        self.collection_inst, new = Collection.objects.get_or_create(source=source, date=timestamp)
+        self.collection_inst.save()
+        if new:
+            self.status += format_html("Adding new collection '{}'<br>\n", source)
+        else:
+            self.status += format_html("Found existing collection '{}'<br>\n", source)
 
 
+    @transaction.atomic
     def process_tune(self, tune):
         # create the SHA1 digest of the canonical tune, and save it in a Song
         song_digest = hashlib.sha1()
@@ -161,14 +172,8 @@ class UploadParser(ABCParser):
         else:
             self.status += format_html("Found existing instance {}<br>\n", tune_digest[:7])
             self.counts['existing_instance'] += 1
-        # save Collection information
-        collection_inst, new = Collection.objects.get_or_create(URL=self.collection)
-        collection_inst.save()
-        collection_inst.instance.add(instance_inst)
-        if new:
-            self.status += format_html("Adding new collection '{}'<br>\n", self.collection)
-        else:
-            self.status += format_html("Found existing collection '{}'<br>\n", self.collection)
+        # add instance to collection
+        self.collection_inst.instance.add(instance_inst)
         # note warning status
         if self.instance_had_warnings:
             self.counts['warning_instance'] +=1
@@ -211,7 +216,7 @@ def upload(request):
             file = request.FILES['file']
             status = format_html("Processing uploaded file '{}', size {} bytes<br>\n", file.name,
                                  file.size)
-            p = UploadParser(collection=file.name)
+            p = UploadParser(filename=file.name)
             p.status_append(status)
             p.parse(file.file)
             results = []
@@ -225,6 +230,9 @@ def upload(request):
                     ('new_title', '{} new title{}'),
                     ('existing_title', '{} existing title{}')):
                 results.append(text.format(p.counts[key], 's' if p.counts[key] != 1 else ''))
+            elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
+            elapsed = elapsed.total_seconds()
+            results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
             return render(request, 'main/upload-post.html', { 'results': results,
                                                               'status': p.get_status() })
         else:
@@ -245,7 +253,7 @@ class CollectionsView(generic.ListView):
     context_object_name = 'collection_list'
 
     def get_queryset(self):
-        return Collection.objects.all().order_by('URL')
+        return Collection.objects.all().order_by('-date')
 
 
 class InstancesView(generic.ListView):

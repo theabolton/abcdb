@@ -1,9 +1,11 @@
 {% extends 'base.html' %}
+{% load tz %}
 {% block title %}Collection {{ collection.id }}{% endblock %}
 {% block headline %}Collection {{ collection.id }}{% endblock %}
 
 {% block content %}
-<p>Collection URL: {{ collection.URL }}</p>
+<p>Collection source: {{ collection.source }}</p>
+<p>Date added (localtime): {{ collection.date|localtime }}</p>
 {% with instances=collection.instance %}
 {% if instances.count <= 20 %}
 <p>Instances found in this collection:

@@ -9,7 +9,7 @@ a song.</p>
 {% if song_list %}
     <ul>
     {% for song in song_list %}
-        <li>{{ song }}</li>
+        <li>{{ song }} ({{ song.digest|slice:":7" }})</li>
     {% endfor %}
     </ul>
 {% else %}

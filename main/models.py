@@ -28,7 +28,7 @@ class Song(models.Model):
     digest = models.CharField(max_length=40, unique=True, db_index=True)
 
     def __str__(self):
-        return 'Song ' + str(self.id) + ' (' + self.digest[:7] + ')'
+        return 'Song ' + str(self.id)
 
 
 class Instance(models.Model):
@@ -58,7 +58,8 @@ class Collection(models.Model):
     # https://docs.djangoproject.com/en/1.10/ref/models/fields/#manytomanyfield
     # CREATE UNIQUE INDEX collection_instance_index ON collection_instance (collection_id, instance_id);
     instance = models.ManyToManyField(Instance)
-    URL = models.URLField(unique=True)  # 200 char limit
+    source = models.CharField(max_length=200, unique=True, db_index=True)
+    date = models.DateTimeField()
 
     def __str__(self):
-        return self.URL
+        return self.source
