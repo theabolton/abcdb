@@ -29,9 +29,9 @@ ABCJS.renderAbc('notation', song);
 </script>
 </p>
 <p>ABC text:
-<blockquote>
-{{ instance.text|linebreaks }}
-</blockquote>
+<pre>
+{{ instance.text }}
+</pre>
 </p>
 {% with collections=view.collections %}
 {% if collections %}
