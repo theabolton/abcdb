@@ -59,12 +59,20 @@ class Title(models.Model):
 
 class Collection(models.Model):
     # CREATE TABLE collection_instance (collection_id INTEGER, instance_id INTEGER, X INTEGER);
-    # !FIX! note the 'X' field! need to add 'through = ' to the ManyToManyField below!
-    # https://docs.djangoproject.com/en/1.10/ref/models/fields/#manytomanyfield
     # CREATE UNIQUE INDEX collection_instance_index ON collection_instance (collection_id, instance_id);
-    instance = models.ManyToManyField(Instance)
+    instances = models.ManyToManyField(Instance, through='CollectionInstance')
     source = models.CharField(max_length=200, unique=True, db_index=True)
     date = models.DateTimeField()
 
     def __str__(self):
         return self.source
+
+
+class CollectionInstance(models.Model):
+    """This holds the many-to-many relationship between Collection and Instance, and also holds for
+    each the reference number (X: field) of the tune and the line number in the file at which it
+    occured."""
+    collection = models.ForeignKey(Collection, on_delete=models.PROTECT)
+    instance = models.ForeignKey(Instance, on_delete=models.PROTECT)
+    X = models.PositiveIntegerField()
+    line_number = models.PositiveIntegerField()

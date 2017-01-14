@@ -6,18 +6,18 @@
 {% block content %}
 <p>Collection source: {{ collection.source }}</p>
 <p>Date added (localtime): {{ collection.date|localtime }}</p>
-{% with instances=collection.instance %}
-{% if instances.count <= 20 %}
+{% with instances=collection.instances %}
+{% if instances.count <= 100 %}
 <p>Instances found in this collection:
 <ul>
-{% for i in collection.instance.all %}
+{% for i in instances.all %}
   {# !FIX! it would be nice to associate a title with each of these (even if it's from another collection?) #}
   <li><a href="/instance/{{ i.pk }}/">{{ i }}</a></li>
 {% endfor %}
 </ul>
 </p>
 {% else %}
-<p>Instances found in this collection: {{ collection.instance.count }}</p>
+<p>Instances found in this collection: {{ instances.count }}</p>
 {% endif %}
 {% endwith %}
 {% endblock %}

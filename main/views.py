@@ -35,7 +35,7 @@ from django.views import generic
 
 from main.forms import TitleSearchForm, UploadForm
 
-from main.models import Collection, Instance, Song, Title
+from main.models import Collection, CollectionInstance, Instance, Song, Title
 from main.abcparser import Tune, ABCParser
 
 
@@ -44,7 +44,7 @@ from main.abcparser import Tune, ABCParser
 def _generate_instance_name(instance):
     """Return a string describing the instance, e.g. 'Instance 3 from new.abc of Song 2 (ab37d30)'"""
     iname = 'Instance {} of Song {}'.format(instance.id, instance.song.id)
-    collection = Collection.objects.filter(instance=instance.id)
+    collection = Collection.objects.filter(instances=instance.id)
     if collection:
         iname += ' from ' + str(collection[0])[:50]
     return iname
@@ -63,7 +63,7 @@ class InstanceView(generic.DetailView):
 
     def collections(self):
         """Collections in which this instance was found."""
-        return Collection.objects.filter(instance__id=self.object.pk)
+        return Collection.objects.filter(instances__id=self.object.pk)
 
     def other_instances(self):
         """Other instances of this instance's song, as a list of dicts, available in the template
@@ -175,7 +175,10 @@ class UploadParser(ABCParser):
             self.status += format_html("Found existing instance {}<br>\n", tune_digest[:7])
             self.counts['existing_instance'] += 1
         # add instance to collection
-        self.collection_inst.instance.add(instance_inst)
+        collinst_inst = CollectionInstance.objects.create(instance=instance_inst,
+                                                          collection=self.collection_inst,
+                                                          X=tune.X, line_number=tune.line_number)
+        collinst_inst.save()
         # note warning status
         if self.instance_had_warnings:
             self.counts['warning_instance'] +=1
