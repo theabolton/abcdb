@@ -28,6 +28,7 @@ import re
 import datetime
 
 from django.db import transaction
+from django.contrib.auth.decorators import permission_required
 from django.shortcuts import render
 from django.utils.html import format_html
 from django.views import generic
@@ -117,15 +118,15 @@ def title_search(request):
 class UploadParser(ABCParser):
     """Extends ABCParser to save tunes to the database, convert logging information to HTML, and
     gather statistics."""
-    def __init__(self, filename=None):
+    def __init__(self, username=None, filename=None):
         super().__init__()
         self.status = ''
         self.counts = collections.Counter()
         self.tune_had_warnings = False
         # create Collection
         timestamp = datetime.datetime.now(datetime.timezone.utc)
-        source = 'upload {} {}'.format(timestamp.strftime('%Y/%m/%d %H:%M:%S'),
-                                       filename or 'no filename')
+        source = 'upload {} {} {}'.format(username or '-', timestamp.strftime('%Y/%m/%d %H:%M:%S'),
+                                          filename or 'no filename')
         self.collection_inst, new = Collection.objects.get_or_create(source=source, date=timestamp)
         self.collection_inst.save()
         if new:
@@ -208,6 +209,7 @@ class UploadParser(ABCParser):
         return self.status
 
 
+@permission_required('main.can_upload', login_url="/login/")
 def upload(request):
     form_class = UploadForm
 
@@ -217,7 +219,7 @@ def upload(request):
             file = request.FILES['file']
             status = format_html("Processing uploaded file '{}', size {} bytes<br>\n", file.name,
                                  file.size)
-            p = UploadParser(filename=file.name)
+            p = UploadParser(username=request.user.username, filename=file.name)
             p.status_append(status)
             p.parse(file.file)
             results = []

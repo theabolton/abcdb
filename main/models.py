@@ -30,6 +30,11 @@ class Song(models.Model):
     def __str__(self):
         return 'Song ' + str(self.id)
 
+    class Meta:
+        # Per-Model permissions don't make sense for an action as complex as 'upload', but it is
+        # convenient and works well to put a single permission here.
+        permissions = ( ('can_upload', 'Can upload files'), )
+
 
 class Instance(models.Model):
     # CREATE TABLE song_instance (song_id INTEGER, instance_id INTEGER);

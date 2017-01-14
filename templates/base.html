@@ -18,15 +18,23 @@
     <section class="row">
 
         <div class="small-4 medium-2 large-2 columns">
-            <p>
-                <a href="/admin/">admin</a><br />
-                <a href="/search/">search</a><br />
-                <a href="/upload/">upload</a><br />
-                <a href="/temp_songs/">[songs]</a><br />
-                <a href="/temp_instances/">[instances]</a><br />
-                <a href="/temp_titles/">[titles]</a><br />
-                <a href="/temp_collections/">[collections]</a><br />
-            </p>
+            <ul class="side-nav" role="navigation" title="Link List">
+                <li role="menuitem"><a href="/search/">search</a></li>
+                {% if user.is_authenticated %}
+                  {% if perms.main.can_upload %}
+                    <li role="menuitem"><a href="/upload/">upload</a></li>
+                  {% endif %}
+                  <li role="menuitem"><a href="/logout/">log out</a></li>
+                  <li class="divider" style="border-top-color:#ccc; margin: 0 2rem 0 0.875rem"></li>
+                  <li role="menuitem"><a href="/temp_songs/">[songs]</a></li>
+                  <li role="menuitem"><a href="/temp_instances/">[instances]</a></li>
+                  <li role="menuitem"><a href="/temp_titles/">[titles]</a></li>
+                  <li role="menuitem"><a href="/temp_collections/">[collections]</a></li>
+                  <li role="menuitem"><a href="/admin/">[admin]</a></li>
+                {% else %}
+                  <li role="menuitem"><a href="/login/?next=/">log in</a></li>
+                {% endif %}
+            </ul>
         </div>
 
         <div class="small-8 medium-10 large-10 columns">
