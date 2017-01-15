@@ -69,6 +69,7 @@ class InstanceView(generic.DetailView):
         """Other instances of this instance's song, as a list of dicts, available in the template
         as view.other_instances."""
         instances = Instance.objects.filter(song__exact=self.object.song_id)
+        instances = instances.defer('text', 'digest')
         context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) }
                        for i in instances if i.pk != self.object.pk]
         return context
@@ -87,7 +88,7 @@ class TitleView(generic.DetailView):
         """Songs given this title, as a list of dicts, available in the template as
         view.song_instances."""
         songs = Song.objects.filter(title__id__exact=self.object.pk)
-        instances = Instance.objects.filter(song__in=songs)
+        instances = Instance.objects.filter(song__in=songs).defer('text', 'digest')
         context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
         return context
 
@@ -267,7 +268,7 @@ class InstancesView(generic.ListView):
     context_object_name = 'instance_list'
 
     def get_queryset(self):
-        return Instance.objects.all().order_by('digest')
+        return Instance.objects.all().order_by('digest').defer('text', 'digest')
 
 
 class SongsView(generic.ListView):
