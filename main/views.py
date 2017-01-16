@@ -152,6 +152,7 @@ class UploadParser(ABCParser):
             self.status += format_html("Found existing song {}<br>\n", song_digest[:7])
             self.counts['existing_song'] += 1
         # save Titles
+        first_title_inst = None
         for t in tune.T:
             title_inst, new = Title.objects.get_or_create(title=t)
             if new:
@@ -161,6 +162,8 @@ class UploadParser(ABCParser):
                 self.status += format_html("Found existing title '{}'<br>\n", t)
                 self.counts['existing_title'] += 1
             title_inst.songs.add(song_inst)
+            if not first_title_inst:
+                first_title_inst = title_inst
         # digest the full tune, and save the tune in an Instance
         tune.full_tune[0] = 'X:1'  # make X fields all 1 for deduplication
         full_tune = '\n'.join(tune.full_tune)
@@ -178,7 +181,8 @@ class UploadParser(ABCParser):
         # add instance to collection
         collinst_inst = CollectionInstance.objects.create(instance=instance_inst,
                                                           collection=self.collection_inst,
-                                                          X=tune.X, line_number=tune.line_number)
+                                                          X=tune.X, line_number=tune.line_number,
+                                                          first_title=first_title_inst)
         collinst_inst.save()
         # note warning status
         if self.instance_had_warnings:

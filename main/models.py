@@ -76,3 +76,4 @@ class CollectionInstance(models.Model):
     instance = models.ForeignKey(Instance, on_delete=models.PROTECT)
     X = models.PositiveIntegerField()
     line_number = models.PositiveIntegerField()
+    first_title = models.ForeignKey(Title, on_delete=models.PROTECT)
