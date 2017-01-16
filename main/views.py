@@ -22,12 +22,14 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 import collections
+import datetime
 import hashlib
 import operator
 import re
-import datetime
+import unicodedata
 
 from django.db import transaction
+from django.db.models import Q
 from django.contrib.auth.decorators import permission_required
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
@@ -49,6 +51,15 @@ def _generate_instance_name(instance):
     if collection:
         iname += ' from ' + str(collection[0])[:50]
     return iname
+
+
+def remove_diacritics(s):
+    """Remove (many) accents and diacritics from string ``s``, by converting to Unicode
+    compatibility decomposed form, and stripping combining characters. This is not optimal, but
+    works well enough to provide useful search results. A better option would be to use the Python
+    ``Unidecode`` module."""
+    nfkd = unicodedata.normalize('NFKD', s)
+    return ''.join([c for c in nfkd if not unicodedata.combining(c)])
 
 
 # ========== User-oriented Model Views ==========
@@ -105,8 +116,12 @@ def title_search(request):
         form = form_class(request.POST)
         if form.is_valid():
             title = request.POST.get('title')
-            # -FIX- what should be done to sanitize title before using it in a query?
-            query_set = Title.objects.filter(title__icontains=title).order_by('title')
+            # search for the given title fragment, matching either the fragment as-is, or a
+            # version of it with (many) accents and diacritics stripped.
+            flat_title = remove_diacritics(title).lower()
+            query_set = Title.objects.filter(Q(title__icontains=title) |
+                                             Q(flat_title__contains=flat_title))
+            query_set = query_set.order_by('flat_title')
             return render(request, 'main/title_search-post.html',
                           { 'results': query_set, 'key': title, 'count': len(query_set) })
         else:
@@ -158,6 +173,8 @@ class UploadParser(ABCParser):
         first_title_inst = None
         for t in tune.T:
             title_inst, new = Title.objects.get_or_create(title=t)
+            title_inst.flat_title = remove_diacritics(t).lower()
+            title_inst.save()
             if new:
                 self.status += format_html("Adding new title '{}'<br>\n", t)
                 self.counts['new_title'] += 1

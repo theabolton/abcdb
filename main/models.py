@@ -52,6 +52,8 @@ class Title(models.Model):
     # CREATE UNIQUE INDEX title_song_index ON title_song (title_id, song_id);
     songs = models.ManyToManyField(Song)
     title = models.CharField(max_length=80, unique=True, db_index=True)
+    # flat_title is a lowercased, diacritic-stripped copy of title
+    flat_title = models.CharField(max_length=80, db_index=True)
 
     def __str__(self):
         return self.title
