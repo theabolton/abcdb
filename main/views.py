@@ -29,7 +29,8 @@ import datetime
 
 from django.db import transaction
 from django.contrib.auth.decorators import permission_required
-from django.shortcuts import render
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404, render
 from django.utils.html import format_html
 from django.views import generic
 
@@ -257,6 +258,16 @@ def upload(request):
             return render(request, 'main/upload-post.html', { 'status': status })
 
     return render(request, 'main/upload.html', { 'form': form_class, })
+
+
+# ========== ABC File Download View ==========
+
+def download(request, pk=None):
+    """Allow downloading the raw ABC of a song instance."""
+    instance = get_object_or_404(Instance, pk=pk)
+    response = HttpResponse(instance.text, content_type='text/vnd.abc')
+    response['Content-Disposition'] = 'attachment; filename="song_instance_%s.abc"' % pk
+    return response
 
 
 # ========== Temporary Views for Development ==========

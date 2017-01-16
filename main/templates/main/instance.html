@@ -7,8 +7,8 @@
 {% block headline %}Song Instance {{ instance.id }}{% endblock %}
 
 {% block content %}
-{# <p>This is an instance of {{ instance.song }}.</p> #}
-<p>All titles used for this song:
+<p>This is an instance of {{ instance.song }}. Titles used for any instance of
+this song include:
 <ul>
 {% for t in view.titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
 </ul>
@@ -27,11 +27,13 @@
 var song = '{{ instance.text|escapejs }}'
 ABCJS.renderAbc('notation', song);
 </script>
-</p>
 <p>ABC text:
 <pre>
 {{ instance.text }}
 </pre>
+<form role="form" action="/download/{{ instance.id }}/" method="post">{% csrf_token %}
+    <button type="submit">Download ABC</button>
+</form>
 </p>
 {% with collectioninstances=view.collectioninstances %}
 {% if collectioninstances %}

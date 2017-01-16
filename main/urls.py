@@ -28,6 +28,7 @@ from . import views
 
 urlpatterns = [
     url(r'^collection/(?P<pk>[0-9]{1,9})/$', views.CollectionView.as_view()),
+    url(r'^download/(?P<pk>[0-9]{1,9})/$', views.download),
     url(r'^instance/(?P<pk>[0-9]{1,9})/$', views.InstanceView.as_view()),
     url(r'^search/$', views.title_search, name='title_search'),
     url(r'^title/(?P<pk>[0-9]{1,9})/$', views.TitleView.as_view()),
