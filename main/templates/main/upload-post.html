@@ -6,7 +6,7 @@
 <p>Upload processing complete. Found in this upload:<br>
 <ul>
 {% for r in results %}
-<li>{{ r }}</li>
+<li>{{ r|safe }}</li>
 {% endfor %}
 </ul></p>
 <p>Messages:

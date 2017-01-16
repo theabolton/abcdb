@@ -230,9 +230,11 @@ def upload(request):
             file = request.FILES['file']
             status = format_html("Processing uploaded file '{}', size {} bytes<br>\n", file.name,
                                  file.size)
+            # create parser instance and parse file
             p = UploadParser(username=request.user.username, filename=file.name)
             p.status_append(status)
             p.parse(file.file)
+            # build a list of natural-language descriptions of the results
             results = []
             for key, text in (
                     ('new_song', '{} new song{}'),
@@ -243,7 +245,10 @@ def upload(request):
                     ('good_instance', '{} instance{} with no warnings'),
                     ('new_title', '{} new title{}'),
                     ('existing_title', '{} existing title{}')):
-                results.append(text.format(p.counts[key], 's' if p.counts[key] != 1 else ''))
+                result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
+                if 'warning' in key and p.counts[key] > 0:
+                    result = '<div style="color:red">' + result + '</div>'
+                results.append(result)
             elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
             elapsed = elapsed.total_seconds()
             results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
