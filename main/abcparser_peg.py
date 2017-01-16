@@ -40,7 +40,7 @@ parser = ParserPEG(
    """
    music_code_line = abc_line EOF
 
-   abc_line = barline / ( barline? element+ (barline element+)* barline? ) abc_eol
+   abc_line = ( ( barline? element+ (barline element+)* barline? ) / barline ) abc_eol
 
    element = broken_rhythm / stem / WSP / chord_or_text / gracing / grace_notes / tuplet /
              slur_begin / slur_end / rollback / multi_measure_rest / measure_repeat / nth_repeat /
@@ -212,12 +212,12 @@ parser = ParserPEG(
    # ==== 4.17 Chords and unisons
 
    # Norbeck used "chord" for chord symbols, and "stem" for what the spec calls chords.
-   stem = ('[' note note+ ']') / note / rest
+   stem = ( '[' note note+ ']' tie? ) / note / rest
 
    # ==== 4.18 Chord symbols
 
    # 'non_quote' is a catch-all for non-conforming ABC (in practice, people sometimes confuse the
-   # chord symbol and annotation syntaxes.) Norbeck's grammar let it east everything else between
+   # chord symbol and annotation syntaxes.) Norbeck's grammar let it eat everything else between
    # the quotes; here we use a negative lookahead assert to make sure it doesn't eat a
    # chord_newline.
    chord = basenote chord_accidental? chord_type? ('/' basenote chord_accidental?)?
@@ -231,7 +231,9 @@ parser = ParserPEG(
 
    # ==== 4.19 Annotations
 
-   text_expression = ( "^" / "<" / ">" / "_" / "@" ) (!chord_newline non_quote)+
+   text_expression = ( ( "^" / "<" / ">" / "_" / "@" ) (!chord_newline non_quote)+ ) /
+                     bad_text_expression
+   bad_text_expression = (!chord_newline non_quote)+   # no leading placement symbol
 
    # ==== 6.1.1 Typesetting linebreaks
 
@@ -290,6 +292,10 @@ class ABCVisitor(PTNodeVisitor):
             return ''.join(children)
 
     # --- node visitors for particular rules, in case-insensitive alphabetical order by rule name
+
+    def visit_bad_text_expression(self, node, children):
+        if self.abc_debug: self.print_debug(node, children)
+        return '@' + ''.join(children) # add a non-specific placement symbol
 
     def visit_chord_newline(self, node, children):
         return ';'
