@@ -146,8 +146,8 @@ class UploadParser(ABCParser):
         timestamp = datetime.datetime.now(datetime.timezone.utc)
         source = 'upload {} {} {}'.format(username or '-', timestamp.strftime('%Y/%m/%d %H:%M:%S'),
                                           filename or 'no filename')
-        self.collection_inst, new = Collection.objects.get_or_create(source=source, date=timestamp)
-        self.collection_inst.save()
+        self.collection_inst, new = Collection.objects.update_or_create(source=source,
+                                        defaults={'date': timestamp})
         if new:
             self.status += format_html("Adding new collection '{}'<br>\n", source)
         else:
@@ -162,7 +162,6 @@ class UploadParser(ABCParser):
                                          tune.canonical)).encode('utf-8') + b'\n')
         song_digest = song_digest.hexdigest()
         song_inst, new = Song.objects.get_or_create(digest=song_digest)
-        song_inst.save()
         if new:
             self.status += format_html("Adding new song {}<br>\n", song_digest[:7])
             self.counts['new_song'] += 1
@@ -172,9 +171,8 @@ class UploadParser(ABCParser):
         # save Titles
         first_title_inst = None
         for t in tune.T:
-            title_inst, new = Title.objects.get_or_create(title=t)
-            title_inst.flat_title = remove_diacritics(t).lower()
-            title_inst.save()
+            title_inst, new = Title.objects.update_or_create(title=t,
+                                 defaults={'flat_title': remove_diacritics(t).lower()})
             if new:
                 self.status += format_html("Adding new title '{}'<br>\n", t)
                 self.counts['new_title'] += 1
@@ -190,8 +188,8 @@ class UploadParser(ABCParser):
         tune_digest = hashlib.sha1()
         tune_digest.update(full_tune.encode('utf-8'))
         tune_digest = tune_digest.hexdigest()
-        instance_inst, new = Instance.objects.get_or_create(song=song_inst, digest=tune_digest,
-                                                            text=full_tune)
+        instance_inst, new = Instance.objects.update_or_create(digest=tune_digest,
+                                 defaults={'song': song_inst, 'text': full_tune})
         if new:
             self.status += format_html("Adding new instance {}<br>\n", tune_digest[:7])
             self.counts['new_instance'] += 1
