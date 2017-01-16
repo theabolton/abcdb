@@ -26,6 +26,7 @@
 import abc
 import codecs
 import re
+import unicodedata
 
 from arpeggio import NoMatch
 
@@ -238,7 +239,8 @@ def decode_abc_text_string(text):
             return ABC_CHARACTER_MNEMONICS.get(m) or m
         else:  # \\ escaped backslash
             return '\\'
-    return RE_ABC_CHARACTER_ENCODINGS.sub(decode, text)
+    text = RE_ABC_CHARACTER_ENCODINGS.sub(decode, text)
+    return unicodedata.normalize('NFC', text)
 
 
 def split_off_comment(line):
