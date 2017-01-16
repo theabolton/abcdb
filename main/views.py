@@ -170,6 +170,8 @@ class UploadParser(ABCParser):
             self.counts['existing_song'] += 1
         # save Titles
         first_title_inst = None
+        if not tune.T:
+            tune.T = ('<untitled>', )
         for t in tune.T:
             title_inst, new = Title.objects.update_or_create(title=t,
                                  defaults={'flat_title': remove_diacritics(t).lower()})
