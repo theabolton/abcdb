@@ -33,11 +33,13 @@ ABCJS.renderAbc('notation', song);
 {{ instance.text }}
 </pre>
 </p>
-{% with collections=view.collections %}
-{% if collections %}
+{% with collectioninstances=view.collectioninstances %}
+{% if collectioninstances %}
 <p>Collections in which this instance occurred:
 <ul>
-{% for c in collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.source }}</a></li>{% endfor %}
+{% for c in collectioninstances %}<li><a href="/collection/{{ c.collection.pk }}/">
+  {{ c.collection.source }}</a> (line {{ c.line_number }}, X:{{ c.X }})
+</li>{% endfor %}
 </ul>
 </p>
 {% endif %}

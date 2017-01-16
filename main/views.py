@@ -61,9 +61,11 @@ class InstanceView(generic.DetailView):
     model = Instance
     template_name = 'main/instance.html'
 
-    def collections(self):
-        """Collections in which this instance was found."""
-        return Collection.objects.filter(instances__id=self.object.pk)
+    def collectioninstances(self):
+        """CollectionInstances in which this instance was found."""
+        ci = CollectionInstance.objects.filter(instance__id=self.object.pk)
+        ci = ci.select_related('collection')
+        return ci
 
     def other_instances(self):
         """Other instances of this instance's song, as a list of dicts, available in the template
