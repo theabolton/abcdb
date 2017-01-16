@@ -26,6 +26,7 @@ from django import forms
 
 class TitleSearchForm(forms.Form):
     title = forms.CharField(label='String to search for in titles (case insensitive):',
+                            widget=forms.TextInput(attrs={'autofocus': 'autofocus'}),
                             required=True)
 
 
