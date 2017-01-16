@@ -144,7 +144,7 @@ class UploadParser(ABCParser):
         # create the SHA1 digest of the canonical tune, and save it in a Song
         song_digest = hashlib.sha1()
         song_digest.update('\n'.join(map(operator.itemgetter('line'),
-                                         tune.canonical)).encode('utf-8'))
+                                         tune.canonical)).encode('utf-8') + b'\n')
         song_digest = song_digest.hexdigest()
         song_inst, new = Song.objects.get_or_create(digest=song_digest)
         song_inst.save()
@@ -169,7 +169,7 @@ class UploadParser(ABCParser):
                 first_title_inst = title_inst
         # digest the full tune, and save the tune in an Instance
         tune.full_tune[0] = 'X:1'  # make X fields all 1 for deduplication
-        full_tune = '\n'.join(tune.full_tune)
+        full_tune = '\n'.join(tune.full_tune) + '\n'
         tune_digest = hashlib.sha1()
         tune_digest.update(full_tune.encode('utf-8'))
         tune_digest = tune_digest.hexdigest()
