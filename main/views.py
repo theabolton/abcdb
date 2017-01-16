@@ -49,7 +49,7 @@ def _generate_instance_name(instance):
     iname = 'Instance {} of Song {}'.format(instance.id, instance.song.id)
     collection = Collection.objects.filter(instances=instance.id)
     if collection:
-        iname += ' from ' + str(collection[0])[:50]
+        iname += ' from ' + str(collection[0])[:70]
     return iname
 
 
