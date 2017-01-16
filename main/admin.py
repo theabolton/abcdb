@@ -26,6 +26,9 @@ from django.contrib import admin
 from .models import Song, Instance, Title, Collection
 
 
+admin.site.site_header = 'ABCdb Administration'
+admin.site.site_title = 'ABCdb site admin'
+
 admin.site.register(Song)
 admin.site.register(Instance)
 admin.site.register(Title)
