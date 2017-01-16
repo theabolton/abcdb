@@ -1,0 +1,27 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %} – ABCdb</title>
+    <link rel="stylesheet" href="{% static "css/foundation.min.css" %}">
+    <style>h1 { font-size: 1.75rem; }</style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <section class="row">
+        <header class="large-12 columns">
+            <h1>ABCdb – {% block headline %}{% endblock %}</h1>
+            <hr>
+        </header>
+    </section>
+
+    <section class="row">
+
+        <div class="large-12 columns">
+            {% block content %}{% endblock %}
+        </div>
+
+    </section>
+
+</body>
+</html>
