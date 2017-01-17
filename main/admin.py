@@ -23,7 +23,7 @@
 
 from django.contrib import admin
 
-from .models import Song, Instance, Title, Collection
+from .models import Song, Instance, Title, Collection, CollectionInstance
 
 
 admin.site.site_header = 'ABCdb Administration'
@@ -33,3 +33,4 @@ admin.site.register(Song)
 admin.site.register(Instance)
 admin.site.register(Title)
 admin.site.register(Collection)
+admin.site.register(CollectionInstance)
