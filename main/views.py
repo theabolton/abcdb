@@ -46,12 +46,11 @@ from main.abcparser import Tune, ABCParser
 
 def _generate_instance_name(instance):
     """Return a string describing the instance, e.g.
-    'Instance 3 of Song 2 from upload smbolton 2017/01/16 08:50:09 JOS.abc'"""
-    iname = 'Instance {} of Song {}'.format(instance.id, instance.song.id)
-    collection = Collection.objects.filter(instances=instance.id)
-    if collection:
-        iname += ' from ' + str(collection[0])[:70]
-    return iname
+    'Instance 3 "Happy Tune" of Song 2 from upload smbolton 2017/01/16 08:50:09 JOS.abc'"""
+    title = instance.first_title.title
+    if len(title) > 50:
+        title = title[:47] + '...'
+    return 'Instance {} "{}" of Song {}'.format(instance.id, title, instance.song_id)
 
 
 def remove_diacritics(s):
@@ -69,6 +68,14 @@ class CollectionView(generic.DetailView):
     model = Collection
     template_name = 'main/collection.html'
 
+    def collectioninstances(self):
+        """CollectionInstances found in this collection, available in the template as
+        view.collectioninstances."""
+        ci = CollectionInstance.objects.filter(collection__id=self.object.pk)
+        ci = ci.select_related('instance__first_title')
+        ci = ci.defer('instance__text', 'instance__digest')
+        return ci
+
 
 class InstanceView(generic.DetailView):
     model = Instance
@@ -83,10 +90,10 @@ class InstanceView(generic.DetailView):
     def other_instances(self):
         """Other instances of this instance's song, as a list of dicts, available in the template
         as view.other_instances."""
-        instances = Instance.objects.filter(song__exact=self.object.song_id)
+        instances = Instance.objects.filter(song=self.object.song_id)
+        instances = instances.exclude(id=self.object.pk)
         instances = instances.defer('text', 'digest')
-        context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) }
-                       for i in instances if i.pk != self.object.pk]
+        context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
         return context
 
     def titles(self):
@@ -102,8 +109,9 @@ class TitleView(generic.DetailView):
     def song_instances(self):
         """Songs given this title, as a list of dicts, available in the template as
         view.song_instances."""
-        songs = Song.objects.filter(title__id__exact=self.object.pk)
+        songs = Song.objects.filter(title=self.object.pk)
         instances = Instance.objects.filter(song__in=songs).defer('text', 'digest')
+        instances = instances.select_related('first_title')
         context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
         return context
 
@@ -192,7 +200,8 @@ class UploadParser(ABCParser):
         tune_digest.update(full_tune.encode('utf-8'))
         tune_digest = tune_digest.hexdigest()
         instance_inst, new = Instance.objects.update_or_create(digest=tune_digest,
-                                 defaults={'song': song_inst, 'text': full_tune})
+                                 defaults={'song': song_inst, 'text': full_tune,
+                                           'first_title': first_title_inst})
         if new:
             self.status += format_html("Adding new instance {}<br>\n", tune_digest[:7])
             self.counts['new_instance'] += 1
@@ -202,8 +211,7 @@ class UploadParser(ABCParser):
         # add instance to collection
         collinst_inst = CollectionInstance.objects.create(instance=instance_inst,
                                                           collection=self.collection_inst,
-                                                          X=tune.X, line_number=tune.line_number,
-                                                          first_title=first_title_inst)
+                                                          X=tune.X, line_number=tune.line_number)
         collinst_inst.save()
         # note warning status
         if self.instance_had_warnings:

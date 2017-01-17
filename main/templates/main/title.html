@@ -5,10 +5,12 @@
 {% block content %}
 <p>Title: {{ title.title }}</p>
 {% with songs=title.songs %}
-  {% if title.songs %}
-    <p>{{ title.songs.count }} {{ title.songs.count|pluralize:"song has,songs have" }} this title.
+  {% if songs %}
+    {% with count=songs.count %}
+    <p>{{ count }} {{ count|pluralize:"song has,songs have" }} this title.
+    {% endwith %}
       {% comment -- list songs (not really useful) %}
-      <ul>{% for s in title.songs.all %}<li>{{ s.pk }}&nbsp;-&nbsp;{{ s.digest }}</li>{% endfor %}</ul>
+      <ul>{% for s in songs.all %}<li>{{ s.pk }}&nbsp;-&nbsp;{{ s.digest }}</li>{% endfor %}</ul>
       {% endcomment %}
     </p>
     <p>Song instances having this title:

@@ -6,11 +6,12 @@
 {% block content %}
 <p>Collection source: {{ collection.source }}</p>
 <p>Date added (localtime): {{ collection.date|localtime }}</p>
-{% with instances=collection.collectioninstance_set %}
+{% with instances=view.collectioninstances %}
 <p>Instances found in this collection: {{ instances.count }}<br />
 <ul>
 {% for i in instances.all %}
-  <li><a href="/instance/{{ i.instance.pk }}/">X:{{ i.X }} | {{ i.line_number }} | {{ i.first_title }}</a></li>
+  <li><a href="/instance/{{ i.instance.pk }}/">X:{{ i.X }} | {{ i.line_number }} |
+      {{ i.instance.first_title }}</a></li>
 {% endfor %}
 </ul>
 </p>

@@ -36,15 +36,6 @@ class Song(models.Model):
         permissions = ( ('can_upload', 'Can upload files'), )
 
 
-class Instance(models.Model):
-    song = models.ForeignKey(Song, on_delete=models.PROTECT)
-    digest = models.CharField(max_length=40, unique=True, db_index=True)
-    text = models.TextField()
-
-    def __str__(self):
-        return 'Instance ' + str(self.id) + ' (' + self.digest[:7] + ')'
-
-
 class Title(models.Model):
     songs = models.ManyToManyField(Song)
     title = models.CharField(max_length=80, unique=True, db_index=True)
@@ -53,6 +44,16 @@ class Title(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class Instance(models.Model):
+    song = models.ForeignKey(Song, on_delete=models.PROTECT)
+    digest = models.CharField(max_length=40, unique=True, db_index=True)
+    first_title = models.ForeignKey(Title, on_delete=models.PROTECT)
+    text = models.TextField()
+
+    def __str__(self):
+        return 'Instance ' + str(self.id)
 
 
 class Collection(models.Model):
@@ -72,4 +73,3 @@ class CollectionInstance(models.Model):
     instance = models.ForeignKey(Instance, on_delete=models.PROTECT)
     X = models.PositiveIntegerField()
     line_number = models.PositiveIntegerField()
-    first_title = models.ForeignKey(Title, on_delete=models.PROTECT)
