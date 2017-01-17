@@ -36,7 +36,12 @@ parser = ParserPEG(
    #  1) corrections for its mistakes (e.g. rests could not be generated),
    #  2) rearrangingment of the rules necessary for PEG ordered-choice parsing, and
    #  3) changes to make it more compatible with the ABC v2.1 specification.
-   # It is roughly ordered by section of the v2.1 specification. It assumes Unicode encoding.
+   # Norbeck's grammar seems to have disappeared from its original location on the web, but
+   # has recently been available at:
+   #    https://web.archive.org/web/20120528143746/http://www.norbeck.nu/abc/bnf/abc20bnf.txt
+
+   # The following is roughly ordered by section of the v2.1 specification. It assumes Unicode
+   # encoding.
    """
    music_code_line = abc_line EOF
 

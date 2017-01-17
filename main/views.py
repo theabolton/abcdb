@@ -45,7 +45,8 @@ from main.abcparser import Tune, ABCParser
 # ========== Utility Functions ==========
 
 def _generate_instance_name(instance):
-    """Return a string describing the instance, e.g. 'Instance 3 from new.abc of Song 2 (ab37d30)'"""
+    """Return a string describing the instance, e.g.
+    'Instance 3 of Song 2 from upload smbolton 2017/01/16 08:50:09 JOS.abc'"""
     iname = 'Instance {} of Song {}'.format(instance.id, instance.song.id)
     collection = Collection.objects.filter(instances=instance.id)
     if collection:
@@ -55,9 +56,9 @@ def _generate_instance_name(instance):
 
 def remove_diacritics(s):
     """Remove (many) accents and diacritics from string ``s``, by converting to Unicode
-    compatibility decomposed form, and stripping combining characters. This is not optimal, but
-    works well enough to provide useful search results. A better option would be to use the Python
-    ``Unidecode`` module."""
+    compatibility decomposed form, and stripping combining characters. This is clearly 'wrong' in
+    many cases, but works well enough to provide useful search results. A better option would be
+    to use the Python ``Unidecode`` module."""
     nfkd = unicodedata.normalize('NFKD', s)
     return ''.join([c for c in nfkd if not unicodedata.combining(c)])
 
@@ -116,7 +117,7 @@ def title_search(request):
         form = form_class(request.POST)
         if form.is_valid():
             title = request.POST.get('title')
-            # search for the given title fragment, matching either the fragment as-is, or a
+            # Search for the given title fragment, matching either the fragment as-is, or a
             # version of it with (many) accents and diacritics stripped.
             flat_title = remove_diacritics(title).lower()
             query_set = Title.objects.filter(Q(title__icontains=title) |
@@ -272,7 +273,6 @@ def upload(request):
             return render(request, 'main/upload-post.html', { 'results': results,
                                                               'status': p.get_status() })
         else:
-            # File uploads are not validated, so this should never be reached. Handle it anyway.
             # form.errors is a dict containing error mesages, keys are field names, values are
             # lists of error message strings.
             status = ('<div data-alert class="alert-box warning radius">The file upload was '

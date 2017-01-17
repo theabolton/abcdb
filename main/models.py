@@ -37,8 +37,6 @@ class Song(models.Model):
 
 
 class Instance(models.Model):
-    # CREATE TABLE song_instance (song_id INTEGER, instance_id INTEGER);
-    # CREATE UNIQUE INDEX song_instance_index ON song_instance (song_id, instance_id);
     song = models.ForeignKey(Song, on_delete=models.PROTECT)
     digest = models.CharField(max_length=40, unique=True, db_index=True)
     text = models.TextField()
@@ -48,8 +46,6 @@ class Instance(models.Model):
 
 
 class Title(models.Model):
-    # CREATE TABLE title_song (title_id INTEGER, song_id INTEGER);
-    # CREATE UNIQUE INDEX title_song_index ON title_song (title_id, song_id);
     songs = models.ManyToManyField(Song)
     title = models.CharField(max_length=80, unique=True, db_index=True)
     # flat_title is a lowercased, diacritic-stripped copy of title
@@ -60,8 +56,6 @@ class Title(models.Model):
 
 
 class Collection(models.Model):
-    # CREATE TABLE collection_instance (collection_id INTEGER, instance_id INTEGER, X INTEGER);
-    # CREATE UNIQUE INDEX collection_instance_index ON collection_instance (collection_id, instance_id);
     instances = models.ManyToManyField(Instance, through='CollectionInstance')
     source = models.CharField(max_length=200, unique=True, db_index=True)
     date = models.DateTimeField()
@@ -72,8 +66,8 @@ class Collection(models.Model):
 
 class CollectionInstance(models.Model):
     """This holds the many-to-many relationship between Collection and Instance, and also holds for
-    each the reference number (X: field) of the tune and the line number in the file at which it
-    occured."""
+    each association the reference number (X: field) of the tune and the line number in the file at
+    which it occured."""
     collection = models.ForeignKey(Collection, on_delete=models.PROTECT)
     instance = models.ForeignKey(Instance, on_delete=models.PROTECT)
     X = models.PositiveIntegerField()
