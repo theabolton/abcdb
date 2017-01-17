@@ -73,6 +73,3 @@ class CollectionInstance(models.Model):
     instance = models.ForeignKey(Instance, on_delete=models.PROTECT)
     X = models.PositiveIntegerField()
     line_number = models.PositiveIntegerField()
-
-    def __str__(self):
-        return 'CollectionInstance {}:{}'.format(self.collection_id, self.instance_id)
