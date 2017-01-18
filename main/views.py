@@ -116,6 +116,17 @@ class TitleView(generic.DetailView):
         return context
 
 
+class TitlesView(generic.ListView):
+    """Display a (possibly paginated) list of all titles."""
+    template_name = 'main/titles.html'
+    context_object_name = 'title_list'
+    paginate_by = 25
+    paginate_orphans = 5
+
+    def get_queryset(self):
+        return Title.objects.all().order_by('title')
+
+
 # ========== Title Search ==========
 
 def title_search(request):
@@ -324,11 +335,3 @@ class SongsView(generic.ListView):
 
     def get_queryset(self):
         return Song.objects.all().order_by('digest')
-
-
-class TitlesView(generic.ListView):
-    template_name = 'main/temp_titles.html'
-    context_object_name = 'title_list'
-
-    def get_queryset(self):
-        return Title.objects.all().order_by('title')

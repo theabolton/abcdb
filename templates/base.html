@@ -20,6 +20,7 @@
         <div class="small-4 medium-2 large-2 columns">
             <ul class="side-nav" role="navigation" title="Link List">
                 <li role="menuitem"><a href="/search/">search</a></li>
+                <li role="menuitem"><a href="/titles/">titles</a></li>
                 {% if user.is_authenticated %}
                   {% if perms.main.can_upload %}
                     <li role="menuitem"><a href="/upload/">upload</a></li>
@@ -28,7 +29,6 @@
                   <li class="divider" style="border-top-color:#ccc; margin: 0 2rem 0 0.875rem"></li>
                   <li role="menuitem"><a href="/temp_songs/">[songs]</a></li>
                   <li role="menuitem"><a href="/temp_instances/">[instances]</a></li>
-                  <li role="menuitem"><a href="/temp_titles/">[titles]</a></li>
                   <li role="menuitem"><a href="/temp_collections/">[collections]</a></li>
                   <li role="menuitem"><a href="/admin/">[admin]</a></li>
                 {% else %}

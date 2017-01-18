@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Titles{% endblock %}
+{% block headline %}Titles{% endblock %}
+
+{% block content %}
+{% if title_list %}
+    {% if is_paginated %}
+        <p>Displaying titles {{ page_obj.start_index }} through {{ page_obj.end_index }}
+           out of {{ page_obj.paginator.count }} titles in the database.</p>
+    {% elif title_list.count != 1 %}
+        <p>Displaying all {{ title_list.count }} titles in the database.</p>
+    {% else %}
+        <p>Displaying the only title in the database.</p>
+    {% endif %}
+    <ul>
+    {% for title in title_list %}
+        <li><a href="/title/{{ title.pk }}/">{{ title.title }}</a></li>
+    {% endfor %}
+    </ul>
+    {% if is_paginated %}
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Previous page</a>
+        {% endif %}
+        {% if page_obj.has_previous and page_obj.has_next %}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        {% endif %}
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next page &raquo;</a>
+        {% endif %}
+    {% endif %}
+{% else %}
+    <p>No titles are available.</p>
+{% endif %}
+{% endblock %}
