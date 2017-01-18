@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block title %}Collections{% endblock %}
+{% block headline %}Collections{% endblock %}
+
+{% block content %}
+{% if collection_list %}
+    {% if is_paginated %}
+        <p>Displaying collections {{ page_obj.start_index }} through {{ page_obj.end_index }}
+           out of {{ page_obj.paginator.count }} collections in the database.</p>
+    {% elif collection_list.count != 1 %}
+        <p>There are {{ collection_list.count }} collections in the database.</p>
+    {% else %}
+        <p>There is only one collection in the database.</p>
+    {% endif %}
+    <ul>
+    {% for collection in collection_list %}
+        <li><a href="/collection/{{ collection.pk }}/">{{ collection.source }}</a></li>
+    {% endfor %}
+    </ul>
+    {% if is_paginated %}
+        {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Previous page</a>
+        {% endif %}
+        {% if page_obj.has_previous and page_obj.has_next %}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        {% endif %}
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}">Next page &raquo;</a>
+        {% endif %}
+    {% endif %}
+{% else %}
+    <p>No collections are available.</p>
+{% endif %}
+
+{% endblock %}

@@ -86,6 +86,17 @@ class CollectionView(generic.DetailView):
         return pci
 
 
+class CollectionsView(generic.ListView):
+    """Display a list of all collections."""
+    template_name = 'main/collections.html'
+    context_object_name = 'collection_list'
+    paginate_by = 40
+    paginate_orphans = 10
+
+    def get_queryset(self):
+        return Collection.objects.all().order_by('-date')
+
+
 class InstanceView(generic.DetailView):
     model = Instance
     template_name = 'main/instance.html'
@@ -328,14 +339,6 @@ def download(request, pk=None):
 
 
 # ========== Temporary Views for Development ==========
-
-class CollectionsView(generic.ListView):
-    template_name = 'main/temp_collections.html'
-    context_object_name = 'collection_list'
-
-    def get_queryset(self):
-        return Collection.objects.all().order_by('-date')
-
 
 class InstancesView(generic.ListView):
     template_name = 'main/temp_instances.html'
