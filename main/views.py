@@ -141,22 +141,29 @@ class TitlesView(generic.ListView):
 def title_search(request):
     form_class = TitleSearchForm
 
-    if request.method == 'POST':
-        form = form_class(request.POST)
+    if 'title' in request.GET:
+        form = form_class(request.GET)
         if form.is_valid():
-            title = request.POST.get('title')
+            title = request.GET.get('title')
             # Search for the given title fragment, matching either the fragment as-is, or a
             # version of it with (many) accents and diacritics stripped.
             flat_title = remove_diacritics(title).lower()
             query_set = Title.objects.filter(Q(title__icontains=title) |
                                              Q(flat_title__contains=flat_title))
             query_set = query_set.order_by('flat_title')
-            return render(request, 'main/title_search-post.html',
-                          { 'results': query_set, 'key': title, 'count': len(query_set) })
+            paginator = Paginator(query_set, 40, orphans=10)
+            page = request.GET.get('page')
+            try:
+                pqs = paginator.page(page)
+            except PageNotAnInteger:
+                pqs = paginator.page(1)
+            except EmptyPage:
+                pqs = paginator.page(paginator.num_pages)
+            return render(request, 'main/title_search.html', { 'results': pqs, 'key': title })
         else:
             message = ('<div data-alert class="alert-box warning radius">There was a problem '
                        'getting the search string.</div>')
-            return render(request, 'main/title_search-post.html', { 'error': message, 'form': form })
+            return render(request, 'main/title_search.html', { 'error': message, 'form': form })
 
     return render(request, 'main/title_search.html', { 'form': form_class, })
 
