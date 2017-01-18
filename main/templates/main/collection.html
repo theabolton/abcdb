@@ -17,17 +17,9 @@
       {{ i.instance.first_title }}</a></li>
 {% endfor %}
 </ul>
-{% if instances.has_other_pages %}
-    {% if instances.has_previous %}
-        <a href="?page={{ instances.previous_page_number }}">&laquo; Previous page</a>
-    {% endif %}
-    {% if instances.has_previous and instances.has_next %}
-    &nbsp;&nbsp;|&nbsp;&nbsp;
-    {% endif %}
-    {% if instances.has_next %}
-        <a href="?page={{ instances.next_page_number }}">Next page &raquo;</a>
-    {% endif %}
-{% endif %}
+{% with page_obj=instances %}
+{% include 'main/pagination_nav.html' %}
+{% endwith %}
 </p>
 {% endwith %}
 {% endblock %}

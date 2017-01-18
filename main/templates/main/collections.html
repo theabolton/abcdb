@@ -17,19 +17,8 @@
         <li><a href="/collection/{{ collection.pk }}/">{{ collection.source }}</a></li>
     {% endfor %}
     </ul>
-    {% if is_paginated %}
-        {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}">&laquo; Previous page</a>
-        {% endif %}
-        {% if page_obj.has_previous and page_obj.has_next %}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        {% endif %}
-        {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}">Next page &raquo;</a>
-        {% endif %}
-    {% endif %}
+    {% include 'main/pagination_nav.html' %}
 {% else %}
     <p>No collections are available.</p>
 {% endif %}
-
 {% endblock %}
