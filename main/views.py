@@ -31,6 +31,7 @@ import unicodedata
 from django.db import transaction
 from django.db.models import Q
 from django.contrib.auth.decorators import permission_required
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.html import format_html
@@ -74,7 +75,15 @@ class CollectionView(generic.DetailView):
         ci = CollectionInstance.objects.filter(collection__id=self.object.pk)
         ci = ci.select_related('instance__first_title')
         ci = ci.defer('instance__text', 'instance__digest')
-        return ci
+        paginator = Paginator(ci, 40, orphans=10)
+        page = self.request.GET.get('page')
+        try:
+            pci = paginator.page(page)
+        except PageNotAnInteger:
+            pci = paginator.page(1)
+        except EmptyPage:
+            pci = paginator.page(paginator.num_pages)
+        return pci
 
 
 class InstanceView(generic.DetailView):

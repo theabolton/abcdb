@@ -7,13 +7,27 @@
 <p>Collection source: {{ collection.source }}</p>
 <p>Date added (localtime): {{ collection.date|localtime }}</p>
 {% with instances=view.collectioninstances %}
-<p>Instances found in this collection: {{ instances.count }}<br />
+<p>Instances found in this collection: {{ instances.paginator.count }}<br />
+{% if instances.has_other_pages %}
+    <p>Displaying instances {{ instances.start_index }} through {{ instances.end_index }}:</p>
+{% endif %}
 <ul>
-{% for i in instances.all %}
+{% for i in instances %}
   <li><a href="/instance/{{ i.instance.pk }}/">X:{{ i.X }} | {{ i.line_number }} |
       {{ i.instance.first_title }}</a></li>
 {% endfor %}
 </ul>
+{% if instances.has_other_pages %}
+    {% if instances.has_previous %}
+        <a href="?page={{ instances.previous_page_number }}">&laquo; Previous page</a>
+    {% endif %}
+    {% if instances.has_previous and instances.has_next %}
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    {% endif %}
+    {% if instances.has_next %}
+        <a href="?page={{ instances.next_page_number }}">Next page &raquo;</a>
+    {% endif %}
+{% endif %}
 </p>
 {% endwith %}
 {% endblock %}
