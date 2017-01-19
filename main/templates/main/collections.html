@@ -1,23 +1,23 @@
 {% extends 'base.html' %}
+{% load humanize %}
 {% block title %}Collections{% endblock %}
 {% block headline %}Collections{% endblock %}
 
 {% block content %}
 {% if collection_list %}
+    {% with count=page_obj.paginator.count %}
+    <p>There {{ count|pluralize:"is,are"}} {{ count|apnumber }} collection{{ count|pluralize:"s" }}
+        in the database.</p>
+    {% endwith %}
     {% if is_paginated %}
-        <p>Displaying collections {{ page_obj.start_index }} through {{ page_obj.end_index }}
-           out of {{ page_obj.paginator.count }} collections in the database.</p>
-    {% elif collection_list.count != 1 %}
-        <p>There are {{ collection_list.count }} collections in the database.</p>
-    {% else %}
-        <p>There is only one collection in the database.</p>
+    <p>Displaying page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</p>
     {% endif %}
-    <ul>
+    <ul style="list-style: none;">
     {% for collection in collection_list %}
         <li><a href="/collection/{{ collection.pk }}/">{{ collection.source }}</a></li>
     {% endfor %}
     </ul>
-    {% include 'main/pagination_nav.html' %}
+    <p>{% include 'main/pagination_nav.html' %}</p>
 {% else %}
     <p>No collections are available.</p>
 {% endif %}

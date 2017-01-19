@@ -1,18 +1,18 @@
 {% extends 'base.html' %}
+{% load humanize %}
 {% block title %}Titles{% endblock %}
 {% block headline %}Titles{% endblock %}
 
 {% block content %}
 {% if title_list %}
+    {% with count=page_obj.paginator.count %}
+    <p>There {{ count|pluralize:"is,are"}} {{ count|apnumber }} title{{ count|pluralize:"s" }}
+        in the database.</p>
+    {% endwith %}
     {% if is_paginated %}
-        <p>Displaying titles {{ page_obj.start_index }} through {{ page_obj.end_index }}
-           out of {{ page_obj.paginator.count }} titles in the database.</p>
-    {% elif title_list.count != 1 %}
-        <p>Displaying all {{ title_list.count }} titles in the database.</p>
-    {% else %}
-        <p>Displaying the only title in the database.</p>
+    <p>Displaying page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</p>
     {% endif %}
-    <ul>
+    <ul style="list-style: none;">
     {% for title in title_list %}
         <li><a href="/title/{{ title.pk }}/">{{ title.title }}</a></li>
     {% endfor %}

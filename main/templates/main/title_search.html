@@ -12,24 +12,26 @@
     {% if results %}
         {% with count=results.paginator.count %}
         <p>{{ count }} title{{ count|pluralize }} matching '{{ key }}'
-           {{ count|pluralize:"was,were" }} found.
+           {{ count|pluralize:"was,were" }} found.</p>
         {% endwith %}
         {% if results.has_other_pages %}
-        Displaying matching titles {{ results.start_index }} through {{ results.end_index }}.
-        {% endif %}</p>
-        <ul>
+        <p>Displaying page {{ results.number }} of {{ results.paginator.num_pages }}.</p>
+        {% endif %}
+        <ul style="list-style: none;">
         {% for title in results %}
             <li><a href="/title/{{ title.pk }}/">{{ title.title }}</a></li>
         {% endfor %}
         </ul>
         {% if results.has_other_pages %}
+            <ul class="inline-list">
             {% if results.has_previous %}
-                <a href="?title={{ key|urlencode }}&page={{ results.previous_page_number }}">&laquo; Previous</a> |
+                <li><a href="?title={{ key|urlencode }}&page={{ results.previous_page_number }}">&laquo; Previous</a></li>
             {% endif %}
-            Page {{ results.number }} of {{ results.paginator.num_pages }}
+            <li>Page {{ results.number }} of {{ results.paginator.num_pages }}</li>
             {% if results.has_next %}
-                | <a href="?title={{ key|urlencode }}&page={{ results.next_page_number }}">Next &raquo;</a>
+                <li><a href="?title={{ key|urlencode }}&page={{ results.next_page_number }}">Next &raquo;</a></li>
             {% endif %}
+            </ul>
         {% endif %}
     {% else %}
         <p>No titles matching '{{ key }}' were found.</p>

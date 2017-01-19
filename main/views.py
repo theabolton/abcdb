@@ -72,9 +72,10 @@ class CollectionView(generic.DetailView):
     def collectioninstances(self):
         """CollectionInstances found in this collection, available in the template as
         view.collectioninstances."""
-        ci = CollectionInstance.objects.filter(collection__id=self.object.pk)
-        ci = ci.select_related('instance__first_title')
-        ci = ci.defer('instance__text', 'instance__digest')
+        ci = (CollectionInstance.objects.filter(collection__id=self.object.pk)
+                 .order_by('line_number')
+                 .select_related('instance__first_title')
+                 .defer('instance__text', 'instance__digest'))
         paginator = Paginator(ci, 40, orphans=10)
         page = self.request.GET.get('page')
         try:
@@ -140,8 +141,8 @@ class TitlesView(generic.ListView):
     """Display a (possibly paginated) list of all titles."""
     template_name = 'main/titles.html'
     context_object_name = 'title_list'
-    paginate_by = 25
-    paginate_orphans = 5
+    paginate_by = 40
+    paginate_orphans = 10
 
     def get_queryset(self):
         return Title.objects.all().order_by('title')
