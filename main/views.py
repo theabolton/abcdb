@@ -111,9 +111,10 @@ class InstanceView(generic.DetailView):
     def other_instances(self):
         """Other instances of this instance's song, as a list of dicts, available in the template
         as view.other_instances."""
-        instances = Instance.objects.filter(song=self.object.song_id)
-        instances = instances.exclude(id=self.object.pk)
-        instances = instances.defer('text', 'digest')
+        instances = (Instance.objects.filter(song=self.object.song_id)
+                        .exclude(id=self.object.pk)
+                        .select_related('first_title')
+                        .defer('text', 'digest'))
         context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
         return context
 
