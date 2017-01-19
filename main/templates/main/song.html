@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+{% block title %}Song {{ song.id }}{% endblock %}
+{% block headline %}Song {{ song.id }}{% endblock %}
+
+{% block content %}
+<p>Digest: {{ song.digest }}</p>
+<p>Titles used for any instance of this song include:</p>
+<ul style="list-style: none;">
+{% for t in view.titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
+</ul>
+<p>Instances of this song:</p>
+<ul style="list-style: none;">
+{% for i in view.instances %}<li><a href="/instance/{{ i.pk }}/">{{ i.instance }}</a></li>{% endfor %}
+</ul>
+<p>Collections in which this song appeared:</p>
+<ul style="list-style: none;">
+{% for c in view.collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.source }}</a></li>{% endfor %}
+</ul>
+{% endblock %}

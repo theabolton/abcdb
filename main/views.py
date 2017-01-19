@@ -124,6 +124,30 @@ class InstanceView(generic.DetailView):
         return Title.objects.filter(songs=self.object.song)
 
 
+class SongView(generic.DetailView):
+    """A 'Song' is just a hash used to identify "musically identical" instances, but it is useful
+    to list the instances and titles that link to it."""
+    model = Song
+    template_name = 'main/song.html'
+
+    def collections(self):
+        """Collections in which this song appeared."""
+        return Collection.objects.filter(instances__song=self.object.id)
+
+    def instances(self):
+        """Instances of this song, as a list of dicts, available in the template as
+        view.instances."""
+        instances = (Instance.objects.filter(song=self.object.id)
+                        .select_related('first_title')
+                        .defer('text', 'digest'))
+        context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
+        return context
+
+    def titles(self):
+        """Titles given to any instance of this song."""
+        return Title.objects.filter(songs=self.object.pk).order_by('title')
+
+
 class TitleView(generic.DetailView):
     model = Title
     template_name = 'main/title.html'
@@ -353,6 +377,8 @@ class InstancesView(generic.ListView):
 class SongsView(generic.ListView):
     template_name = 'main/temp_songs.html'
     context_object_name = 'song_list'
+    paginate_by = 40
+    paginate_orphans = 10
 
     def get_queryset(self):
-        return Song.objects.all().order_by('digest')
+        return Song.objects.all().order_by('id')

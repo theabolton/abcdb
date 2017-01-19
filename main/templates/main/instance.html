@@ -7,8 +7,8 @@
 {% block headline %}Song Instance {{ instance.id }}{% endblock %}
 
 {% block content %}
-<p>This is an instance of {{ instance.song }}. Titles used for any instance of
-this song include:
+<p>This is an instance of <a href="/song/{{ instance.song.pk }}/">{{ instance.song }}</a>.
+Titles used for any instance of this song include:
 <ul>
 {% for t in view.titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
 </ul>

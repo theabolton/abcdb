@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load humanize %}
 {% block title %}Songs{% endblock %}
 {% block headline %}Songs{% endblock %}
 
@@ -7,11 +8,19 @@
 a song.</p>
 
 {% if song_list %}
-    <ul>
+    {% with count=page_obj.paginator.count %}
+    <p>There {{ count|pluralize:"is,are"}} {{ count|apnumber }} song{{ count|pluralize:"s" }}
+        in the database.</p>
+    {% endwith %}
+    {% if is_paginated %}
+    <p>Displaying page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.</p>
+    {% endif %}
+    <ul style="list-style: none;">
     {% for song in song_list %}
-        <li>{{ song }} ({{ song.digest|slice:":7" }})</li>
+        <li><a href="/song/{{ song.pk }}/">{{ song }}</a></li>
     {% endfor %}
     </ul>
+    {% include 'main/pagination_nav.html' %}
 {% else %}
     <p>No songs are available.</p>
 {% endif %}
