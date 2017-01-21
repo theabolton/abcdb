@@ -212,7 +212,7 @@ class UploadParser(ABCParser):
     gather statistics."""
     def __init__(self, username=None, filename=None):
         super().__init__()
-        self.status = ''
+        self.journal = ''
         self.counts = collections.Counter()
         self.tune_had_errors = False
         self.tune_had_warnings = False
@@ -223,9 +223,9 @@ class UploadParser(ABCParser):
         self.collection_inst, new = Collection.objects.update_or_create(source=source,
                                         defaults={'date': timestamp})
         if new:
-            self.status += format_html("Adding new collection '{}'<br>\n", source)
+            self.journal += format_html("Adding new collection '{}'<br>\n", source)
         else:
-            self.status += format_html("Found existing collection '{}'<br>\n", source)
+            self.journal += format_html("Found existing collection '{}'<br>\n", source)
 
 
     def start_tune(self):
@@ -242,10 +242,10 @@ class UploadParser(ABCParser):
         song_digest = song_digest.hexdigest()
         song_inst, new = Song.objects.get_or_create(digest=song_digest)
         if new:
-            self.status += format_html("Adding new song {}<br>\n", song_digest[:7])
+            self.journal += format_html("Adding new song {}<br>\n", song_digest[:7])
             self.counts['new_song'] += 1
         else:
-            self.status += format_html("Found existing song {}<br>\n", song_digest[:7])
+            self.journal += format_html("Found existing song {}<br>\n", song_digest[:7])
             self.counts['existing_song'] += 1
         # save Titles
         first_title_inst = None
@@ -255,10 +255,10 @@ class UploadParser(ABCParser):
             title_inst, new = Title.objects.update_or_create(title=t,
                                  defaults={'flat_title': remove_diacritics(t).lower()})
             if new:
-                self.status += format_html("Adding new title '{}'<br>\n", t)
+                self.journal += format_html("Adding new title '{}'<br>\n", t)
                 self.counts['new_title'] += 1
             else:
-                self.status += format_html("Found existing title '{}'<br>\n", t)
+                self.journal += format_html("Found existing title '{}'<br>\n", t)
                 self.counts['existing_title'] += 1
             title_inst.songs.add(song_inst)
             if not first_title_inst:
@@ -273,10 +273,10 @@ class UploadParser(ABCParser):
                                  defaults={'song': song_inst, 'text': full_tune,
                                            'first_title': first_title_inst})
         if new:
-            self.status += format_html("Adding new instance {}<br>\n", tune_digest[:7])
+            self.journal += format_html("Adding new instance {}<br>\n", tune_digest[:7])
             self.counts['new_instance'] += 1
         else:
-            self.status += format_html("Found existing instance {}<br>\n", tune_digest[:7])
+            self.journal += format_html("Found existing instance {}<br>\n", tune_digest[:7])
             self.counts['existing_instance'] += 1
         # add instance to collection
         collinst_inst = CollectionInstance.objects.create(instance=instance_inst,
@@ -296,29 +296,29 @@ class UploadParser(ABCParser):
         if isinstance(text, bytes):
             text = text.decode('utf-8', errors='backslashreplace')
         if severity == 'error':
-            self.status += format_html("Error, line {}: {}: {}<br>\n", str(self.line_number),
+            self.journal += format_html("Error, line {}: {}: {}<br>\n", str(self.line_number),
                                        message, text)
             self.tune_had_errors = True
         elif severity == 'warn':
-            self.status += format_html("Warning, line {}: {}: {}<br>\n", str(self.line_number),
+            self.journal += format_html("Warning, line {}: {}: {}<br>\n", str(self.line_number),
                                        message, text)
             self.tune_had_warnings = True
         elif severity == 'info':
             if 'New tune' in message:
                 x = re.sub('\D', '', message) # get tune number
-                self.status += format_html("Found start of new tune #{} at line {}<br>\n",
+                self.journal += format_html("Found start of new tune #{} at line {}<br>\n",
                                         x, str(self.line_number))
         else:  # severity == 'ignore'
             #print(severity + ' | ' + str(self.line_number) + ' | ' + message + ' | ' + text)
             pass
 
 
-    def status_append(self, text):
-        self.status += text
+    def append_journal(self, text):
+        self.journal += text
 
 
-    def get_status(self):
-        return self.status
+    def get_journal(self):
+        return self.journal
 
 
 @permission_required('main.can_upload', login_url="/login/")
@@ -333,7 +333,7 @@ def upload(request):
                                  file.size)
             # create parser instance and parse file
             p = UploadParser(username=request.user.username, filename=file.name)
-            p.status_append(status)
+            p.append_journal(status)
             p.parse(file.file)
             # build a list of natural-language descriptions of the results
             results = []
@@ -355,13 +355,13 @@ def upload(request):
             elapsed = elapsed.total_seconds()
             results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
             return render(request, 'main/upload-post.html', { 'results': results,
-                                                              'status': p.get_status() })
+                                                              'status': p.get_journal() })
         else:
             # form.errors is a dict containing error mesages, keys are field names, values are
             # lists of error message strings.
-            status = ('<div data-alert class="alert-box warning radius">The file upload was '
-                      'invalid. Contact the site administrator if this problem persists.</div>')
-            return render(request, 'main/upload-post.html', { 'status': status })
+            message = ('<div data-alert class="alert-box warning radius">The file upload was '
+                       'invalid. Contact the site administrator if this problem persists.</div>')
+            return render(request, 'main/upload-post.html', { 'error': message })
 
     return render(request, 'main/upload.html', { 'form': form_class, })
 

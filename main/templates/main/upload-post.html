@@ -3,6 +3,9 @@
 {% block headline %}Processing Uploaded ABC{% endblock %}
 
 {% block content %}
+{% if error %}
+  {{ error }}
+{% else %}
 <p>Upload processing complete. Found in this upload:<br>
 <ul>
 {% for r in results %}
@@ -13,4 +16,5 @@
 <div style="overflow-y:scroll;height:500px">
 {{ status|safe }}
 </div></p>
+{% endif %}
 {% endblock %}
