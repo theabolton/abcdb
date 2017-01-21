@@ -4,13 +4,18 @@
 
 {% block content %}
 <p>The database currently contains:</p>
-<ul>
+<ul style="list-style: none;">
 <li>{{ songs }} songs</li>
 <li>{{ instances }} song instances</li>
 <li>{{ titles }} titles</li>
 <li>{{ collections }} collections</li>
 </ul>
-<p>Instances vs. songs deduplication amount: {{ dedup_percent }}%</p>
+<p>Instances vs. songs deduplication amount: {{ inst_to_song_dedup }}%</p>
+
+<p>The total number of instances, in all collections which contributed at
+least one new instance, is {{ collection_instances }}.</p>
+
+<p>Collection instances vs. database instances deduplication amount: {{ coll_to_inst_dedup }}%</p>
 
 <p>In the following table, the instances of each song are counted, then those
 counts are tabulated to show the frequency of occurrence of each count.

@@ -29,7 +29,7 @@ import re
 import unicodedata
 
 from django.db import connection, transaction
-from django.db.models import Q
+from django.db.models import F, Q, Sum
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
@@ -386,14 +386,28 @@ def stats(request):
     """Show various statistics about the database."""
     songs = Song.objects.count()
     instances = Instance.objects.count()
-    if instances > 0:
-        dedup_percent = '{:.2f}'.format((instances - songs) / instances * 100.0)
-    else:
-        dedup_percent = 'n/a'
     titles = Title.objects.count()
     collections = Collection.objects.count()
 
-    # generate a histogram of number-of-instances per song:
+    # compare number of instances to number of songs
+    if instances > 0:
+        inst_to_song_dedup = '{:.2f}'.format((instances - songs) / instances * 100.0)
+    else:
+        inst_to_song_dedup = 'n/a'
+
+    # Compare number of instances in collections to number of instances in database (collections
+    # which contributed no new instances are omitted; usually these are subsequent uploads of the
+    # same file.)
+    collection_instances = (
+        Collection.objects.filter(new_instances__gt=0)
+            .aggregate(total=Sum(F('existing_instances')+F('new_instances')))['total'])
+    if collection_instances > 0:
+        coll_to_inst_dedup = '{:.2f}'.format((collection_instances - instances) /
+                                             collection_instances * 100.0)
+    else:
+        coll_to_inst_dedup = 'n/a'
+
+    # generate a histogram of number-of-instances per song
     with connection.cursor() as cursor:
         cursor.execute('SELECT instance_count, COUNT(instance_count) FROM ( '
                            'SELECT COUNT(*) AS instance_count '
@@ -403,7 +417,7 @@ def stats(request):
                        'GROUP BY instance_count ORDER BY instance_count DESC')
         inst_per_song_histo = cursor.fetchall()
 
-    # generate a histogram of number-of-collections per instance:
+    # generate a histogram of number-of-collections per instance
     with connection.cursor() as cursor:
         cursor.execute('SELECT collection_count, COUNT(collection_count) FROM ( '
                            'SELECT COUNT(*) AS collection_count '
@@ -412,11 +426,12 @@ def stats(request):
                        'GROUP BY collection_count ORDER BY collection_count DESC')
         coll_per_inst_histo = cursor.fetchall()
 
-    # The ``context = locals()`` trick, but explicit:
+    # The ``context = locals()`` trick, but explicit
     context = locals()
     context = { key: context[key] for key in
-                  ('coll_per_inst_histo', 'collections', 'dedup_percent', 'inst_per_song_histo',
-                   'instances', 'songs', 'titles') }
+                ('coll_per_inst_histo', 'coll_to_inst_dedup', 'collection_instances',
+                 'collections', 'inst_to_song_dedup', 'inst_per_song_histo', 'instances',
+                 'songs', 'titles') }
     return render(request, 'main/stats.html', context)
 
 
