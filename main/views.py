@@ -228,6 +228,20 @@ class UploadParser(ABCParser):
             self.journal += format_html("Found existing collection '{}'<br>\n", source)
 
 
+    def parse(self, filehandle):
+        """Parse ABC upload, then save statistics to the collection."""
+        super().parse(filehandle)
+        self.collection_inst.new_songs = self.counts['new_songs']
+        self.collection_inst.existing_songs = self.counts['existing_songs']
+        self.collection_inst.new_instances = self.counts['new_instances']
+        self.collection_inst.existing_instances = self.counts['existing_instances']
+        self.collection_inst.error_instances = self.counts['error_instances']
+        self.collection_inst.warning_instances = self.counts['warning_instances']
+        self.collection_inst.new_titles = self.counts['new_titles']
+        self.collection_inst.existing_titles = self.counts['existing_titles']
+        self.collection_inst.save()
+
+
     def start_tune(self):
         self.tune_had_errors = False
         self.tune_had_warnings = False
@@ -243,10 +257,10 @@ class UploadParser(ABCParser):
         song_inst, new = Song.objects.get_or_create(digest=song_digest)
         if new:
             self.journal += format_html("Adding new song {}<br>\n", song_digest[:7])
-            self.counts['new_song'] += 1
+            self.counts['new_songs'] += 1
         else:
             self.journal += format_html("Found existing song {}<br>\n", song_digest[:7])
-            self.counts['existing_song'] += 1
+            self.counts['existing_songs'] += 1
         # save Titles
         first_title_inst = None
         if not tune.T:
@@ -256,10 +270,10 @@ class UploadParser(ABCParser):
                                  defaults={'flat_title': remove_diacritics(t).lower()})
             if new:
                 self.journal += format_html("Adding new title '{}'<br>\n", t)
-                self.counts['new_title'] += 1
+                self.counts['new_titles'] += 1
             else:
                 self.journal += format_html("Found existing title '{}'<br>\n", t)
-                self.counts['existing_title'] += 1
+                self.counts['existing_titles'] += 1
             title_inst.songs.add(song_inst)
             if not first_title_inst:
                 first_title_inst = title_inst
@@ -274,10 +288,10 @@ class UploadParser(ABCParser):
                                            'first_title': first_title_inst})
         if new:
             self.journal += format_html("Adding new instance {}<br>\n", tune_digest[:7])
-            self.counts['new_instance'] += 1
+            self.counts['new_instances'] += 1
         else:
             self.journal += format_html("Found existing instance {}<br>\n", tune_digest[:7])
-            self.counts['existing_instance'] += 1
+            self.counts['existing_instances'] += 1
         # add instance to collection
         collinst_inst = CollectionInstance.objects.create(instance=instance_inst,
                                                           collection=self.collection_inst,
@@ -285,11 +299,11 @@ class UploadParser(ABCParser):
         collinst_inst.save()
         # note warning status
         if self.tune_had_errors:
-            self.counts['error_instance'] +=1
+            self.counts['error_instances'] +=1
         elif self.tune_had_warnings:
-            self.counts['warning_instance'] +=1
+            self.counts['warning_instances'] +=1
         else:
-            self.counts['good_instance'] +=1
+            self.counts['good_instances'] +=1
 
 
     def log(self, severity, message, text):
@@ -338,17 +352,17 @@ def upload(request):
             # build a list of natural-language descriptions of the results
             results = []
             for key, text in (
-                    ('new_song', '{} new song{}'),
-                    ('existing_song', '{} existing song{}'),
-                    ('new_instance', '{} new song instance{}'),
-                    ('existing_instance', '{} existing song instance{}'),
-                    ('error_instance', '{} instance{} with errors'),
-                    ('warning_instance', '{} instance{} with warnings'),
-                    ('good_instance', '{} instance{} with no errors or warnings'),
-                    ('new_title', '{} new title{}'),
-                    ('existing_title', '{} existing title{}')):
+                    ('new_songs', '{} new song{}'),
+                    ('existing_songs', '{} existing song{}'),
+                    ('new_instances', '{} new song instance{}'),
+                    ('existing_instances', '{} existing song instance{}'),
+                    ('error_instances', '{} instance{} with errors'),
+                    ('warning_instances', '{} instance{} with warnings'),
+                    ('good_instances', '{} instance{} with no errors or warnings'),
+                    ('new_titles', '{} new title{}'),
+                    ('existing_titles', '{} existing title{}')):
                 result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
-                if 'warning' in key and p.counts[key] > 0:
+                if ('warning' in key or 'error' in key) and p.counts[key] > 0:
                     result = '<div style="color:red">' + result + '</div>'
                 results.append(result)
             elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date

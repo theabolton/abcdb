@@ -60,6 +60,14 @@ class Collection(models.Model):
     instances = models.ManyToManyField(Instance, through='CollectionInstance')
     source = models.CharField(max_length=200, unique=True, db_index=True)
     date = models.DateTimeField()
+    new_songs = models.IntegerField(default=0)
+    existing_songs = models.IntegerField(default=0)
+    new_instances = models.IntegerField(default=0)
+    existing_instances = models.IntegerField(default=0)
+    error_instances = models.IntegerField(default=0)
+    warning_instances = models.IntegerField(default=0)
+    new_titles = models.IntegerField(default=0)
+    existing_titles = models.IntegerField(default=0)
 
     def __str__(self):
         return self.source
@@ -71,8 +79,8 @@ class CollectionInstance(models.Model):
     which it occured."""
     collection = models.ForeignKey(Collection, on_delete=models.PROTECT)
     instance = models.ForeignKey(Instance, on_delete=models.PROTECT)
-    X = models.PositiveIntegerField()
-    line_number = models.PositiveIntegerField()
+    X = models.IntegerField()
+    line_number = models.IntegerField()
 
     def __str__(self):
         return 'CollectionInstance {}:{}'.format(self.collection_id, self.instance_id)

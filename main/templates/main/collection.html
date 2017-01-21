@@ -8,9 +8,20 @@
 <p>Collection source: {{ collection.source }}</p>
 <p>Date added (localtime): {{ collection.date|localtime }}</p>
 {% with instances=view.collectioninstances %}
+<p>This collection contained:</p>
+<ul style="list-style: none;">
+    <li>{{ collection.new_songs }} new song{{ collection.new_songs|pluralize }}</li>
+    <li>{{ collection.existing_songs }} existing song{{ collection.existing_songs|pluralize }}</li>
+    <li>{{ collection.new_instances }} new instance{{ collection.new_instances|pluralize }}</li>
+    <li>{{ collection.existing_instances }} existing instance{{ collection.existing_instances|pluralize }}</li>
+    <li>{{ collection.error_instances }} instance{{ collection.error_instances|pluralize }} with errors</li>
+    <li>{{ collection.warning_instances }} instance{{ collection.warning_instances|pluralize }} with warnings (but no errors)</li>
+    <li>{{ collection.new_titles }} new title{{ collection.new_titles|pluralize }}</li>
+    <li>{{ collection.existing_titles }} existing title{{ collection.existing_titles|pluralize }}</li>
+</ul>
 {% with count=instances.paginator.count %}
 <p>There {{ count|pluralize:"is,are"}} {{ count|apnumber }} song
-    instance{{ count|pluralize:"s" }} in this collection.</p>
+    instance{{ count|pluralize }} in this collection.</p>
 {% endwith %}
 {% if instances.has_other_pages %}
     <p>Displaying page {{ instances.number }} of {{ instances.paginator.num_pages }}.</p>
