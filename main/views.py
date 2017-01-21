@@ -28,7 +28,7 @@ import operator
 import re
 import unicodedata
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Q
 from django.contrib.auth.decorators import permission_required
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -352,6 +352,46 @@ def upload(request):
             return render(request, 'main/upload-post.html', { 'status': status })
 
     return render(request, 'main/upload.html', { 'form': form_class, })
+
+
+# ========== Database Statistics View ==========
+
+def stats(request):
+    """Show various statistics about the database."""
+    songs = Song.objects.count()
+    instances = Instance.objects.count()
+    if instances > 0:
+        dedup_percent = '{:.2f}'.format((instances - songs) / instances * 100.0)
+    else:
+        dedup_percent = 'n/a'
+    titles = Title.objects.count()
+    collections = Collection.objects.count()
+
+    # generate a histogram of number-of-instances per song:
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT instance_count, COUNT(instance_count) FROM ( '
+                           'SELECT COUNT(*) AS instance_count '
+                           'FROM main_song LEFT OUTER JOIN main_instance '
+                           'ON main_song.id = main_instance.song_id '
+                           'GROUP BY main_song.id ) '
+                       'GROUP BY instance_count ORDER BY instance_count DESC')
+        inst_per_song_histo = cursor.fetchall()
+
+    # generate a histogram of number-of-collections per instance:
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT collection_count, COUNT(collection_count) FROM ( '
+                           'SELECT COUNT(*) AS collection_count '
+                           'FROM main_collectioninstance '
+                           'GROUP BY main_collectioninstance.instance_id ) '
+                       'GROUP BY collection_count ORDER BY collection_count DESC')
+        coll_per_inst_histo = cursor.fetchall()
+
+    # The ``context = locals()`` trick, but explicit:
+    context = locals()
+    context = { key: context[key] for key in
+                  ('coll_per_inst_histo', 'collections', 'dedup_percent', 'inst_per_song_histo',
+                   'instances', 'songs', 'titles') }
+    return render(request, 'main/stats.html', context)
 
 
 # ========== ABC File Download View ==========

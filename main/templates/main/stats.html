@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Stats{% endblock %}
+{% block headline %}Database Statistics{% endblock %}
+
+{% block content %}
+<p>The database currently contains:</p>
+<ul>
+<li>{{ songs }} songs</li>
+<li>{{ instances }} song instances</li>
+<li>{{ titles }} titles</li>
+<li>{{ collections }} collections</li>
+</ul>
+<p>Instances vs. songs deduplication amount: {{ dedup_percent }}%</p>
+
+<p>In the following table, the instances of each song are counted, then those
+counts are tabulated to show the frequency of occurrence of each count.
+Counts greater than 1 reflect successful identification of "musically
+identical" instances of the same song.</p>
+<table>
+<tr><th>Instances-per-Song Count</th><th>Frequency</th></tr>
+{% for c, n in inst_per_song_histo %}
+  <tr><td>{{ c }}</td><td>{{ n }}</td>
+{% endfor %}
+</table>
+
+<p>Similarly, the following table shows the frequency of occurrence of
+collections per instance. Counts greater than 1 reflect instances which
+were found in more than one collection, representing successful deduplication
+at the instance level.</p>
+<table>
+<tr><th>Collections-per-Instance Count</th><th>Frequency</th></tr>
+{% for c, n in coll_per_inst_histo %}
+  <tr><td>{{ c }}</td><td>{{ n }}</td>
+{% endfor %}
+</table>
+{% endblock %}

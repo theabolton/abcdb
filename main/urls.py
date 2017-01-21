@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^instance/(?P<pk>[0-9]{1,9})/$', views.InstanceView.as_view()),
     url(r'^search/$', views.title_search, name='title_search'),
     url(r'^song/(?P<pk>[0-9]{1,9})/$', views.SongView.as_view()),
+    url(r'^stats/$', views.stats, name='stats'),
     url(r'^title/(?P<pk>[0-9]{1,9})/$', views.TitleView.as_view()),
     url(r'^titles/$', views.TitlesView.as_view()),
     url(r'^upload/$', views.upload, name='upload'),
