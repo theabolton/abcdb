@@ -44,8 +44,7 @@ class Tune(object):
                               # a list of strings, one per line, without end-of-line characters.
         self.X = None         # The tune number, i.e. the numeric value of the X field.
         self.line_number = 0  # The line number in the input file at which this tune started.
-        self.T = []           # A list of titles, in order of appearance, including mis-used P
-                              # fields.
+        self.T = []           # A list of titles, in order of appearance.
         self.canonical = []   # The canonicized song, containing only those header fields which
                               # effect the music itself (K, L, M, m, P, U, and V), plus the body
                               # of the tune (music code) with the following stripped: comments,
@@ -330,7 +329,9 @@ class ABCParser(metaclass=abc.ABCMeta):
         Parameters
         ----------
         severity : str
-            One of 'warn', 'info', 'ignore'.
+            One of 'error', 'warn', 'info', or 'ignore'. 'error' means the parser is unable to
+            parse something inside a tune. 'warn' indicates a parsable violation of the ABC
+            standard.
         message : str
             An explanation of the log event.
         text : str or bytes
@@ -437,7 +438,7 @@ class ABCParser(metaclass=abc.ABCMeta):
         try:
             line = canonify_music_code(line, text_string_decoder=decode_abc_text_string)
         except NoMatch as err:
-            self.log('warn', 'Music code failed to parse', str(err))
+            self.log('error', 'Music code failed to parse', str(err))
         tune.canonical_append('body', line)
 
 
@@ -531,6 +532,7 @@ class ABCParser(metaclass=abc.ABCMeta):
                     continue
 
                 if field_type == 'X':  # start of tune
+                    self.start_tune()
                     self.handle_field_X_tune_number(tune, field_data, line, comment)
                     if self.state not in ('tuneheader', 'tunebody'):
                         self.state = 'tuneheader'

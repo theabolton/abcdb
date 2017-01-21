@@ -214,6 +214,7 @@ class UploadParser(ABCParser):
         super().__init__()
         self.status = ''
         self.counts = collections.Counter()
+        self.tune_had_errors = False
         self.tune_had_warnings = False
         # create Collection
         timestamp = datetime.datetime.now(datetime.timezone.utc)
@@ -225,6 +226,11 @@ class UploadParser(ABCParser):
             self.status += format_html("Adding new collection '{}'<br>\n", source)
         else:
             self.status += format_html("Found existing collection '{}'<br>\n", source)
+
+
+    def start_tune(self):
+        self.tune_had_errors = False
+        self.tune_had_warnings = False
 
 
     @transaction.atomic
@@ -278,7 +284,9 @@ class UploadParser(ABCParser):
                                                           X=tune.X, line_number=tune.line_number)
         collinst_inst.save()
         # note warning status
-        if self.instance_had_warnings:
+        if self.tune_had_errors:
+            self.counts['error_instance'] +=1
+        elif self.tune_had_warnings:
             self.counts['warning_instance'] +=1
         else:
             self.counts['good_instance'] +=1
@@ -287,16 +295,19 @@ class UploadParser(ABCParser):
     def log(self, severity, message, text):
         if isinstance(text, bytes):
             text = text.decode('utf-8', errors='backslashreplace')
-        if severity == 'warn':
+        if severity == 'error':
+            self.status += format_html("Error, line {}: {}: {}<br>\n", str(self.line_number),
+                                       message, text)
+            self.tune_had_errors = True
+        elif severity == 'warn':
             self.status += format_html("Warning, line {}: {}: {}<br>\n", str(self.line_number),
                                        message, text)
-            self.instance_had_warnings = True
+            self.tune_had_warnings = True
         elif severity == 'info':
             if 'New tune' in message:
                 x = re.sub('\D', '', message) # get tune number
                 self.status += format_html("Found start of new tune #{} at line {}<br>\n",
                                         x, str(self.line_number))
-                self.instance_had_warnings = False
         else:  # severity == 'ignore'
             #print(severity + ' | ' + str(self.line_number) + ' | ' + message + ' | ' + text)
             pass
@@ -331,8 +342,9 @@ def upload(request):
                     ('existing_song', '{} existing song{}'),
                     ('new_instance', '{} new song instance{}'),
                     ('existing_instance', '{} existing song instance{}'),
+                    ('error_instance', '{} instance{} with errors'),
                     ('warning_instance', '{} instance{} with warnings'),
-                    ('good_instance', '{} instance{} with no warnings'),
+                    ('good_instance', '{} instance{} with no errors or warnings'),
                     ('new_title', '{} new title{}'),
                     ('existing_title', '{} existing title{}')):
                 result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
