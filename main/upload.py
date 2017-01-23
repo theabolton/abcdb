@@ -21,8 +21,22 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import collections
+import datetime
+import hashlib
+import operator
+import re
 
-# ========== ABC File Upload View and Parser Subclass ==========
+from django.db import transaction
+from django.shortcuts import render
+from django.utils.html import format_html
+
+from main.abcparser import ABCParser
+from main.forms import UploadForm
+from main.models import Collection, CollectionInstance, Instance, Song, Title
+import main.views
+
+# ========== ABCParser Subclass ==========
 
 class UploadParser(ABCParser):
     """Extends ABCParser to save tunes to the database, convert logging information to HTML, and
@@ -84,7 +98,7 @@ class UploadParser(ABCParser):
             tune.T = ('<untitled>', )
         for t in tune.T:
             title_inst, new = Title.objects.update_or_create(title=t,
-                                 defaults={'flat_title': remove_diacritics(t).lower()})
+                                 defaults={'flat_title': main.views.remove_diacritics(t).lower()})
             if new:
                 self.journal += format_html("Adding new title '{}'<br>\n", t)
                 self.counts['new_titles'] += 1
@@ -152,46 +166,45 @@ class UploadParser(ABCParser):
         return self.journal
 
 
-@permission_required('main.can_upload', login_url="/login/")
-def upload(request):
+# ========== ABC Upload POST View ==========
+
+def handle_upload(request):
+    """Handle an upload POST request."""
     form_class = UploadForm
 
-    if request.method == 'POST':
-        form = form_class(request.POST, request.FILES)
-        if form.is_valid():
-            file = request.FILES['file']
-            status = format_html("Processing uploaded file '{}', size {} bytes<br>\n", file.name,
-                                 file.size)
-            # create parser instance and parse file
-            p = UploadParser(username=request.user.username, filename=file.name)
-            p.append_journal(status)
-            p.parse(file.file)
-            # build a list of natural-language descriptions of the results
-            results = []
-            for key, text in (
-                    ('new_songs', '{} new song{}'),
-                    ('existing_songs', '{} existing song{}'),
-                    ('new_instances', '{} new song instance{}'),
-                    ('existing_instances', '{} existing song instance{}'),
-                    ('error_instances', '{} instance{} with errors'),
-                    ('warning_instances', '{} instance{} with warnings'),
-                    ('good_instances', '{} instance{} with no errors or warnings'),
-                    ('new_titles', '{} new title{}'),
-                    ('existing_titles', '{} existing title{}')):
-                result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
-                if ('warning' in key or 'error' in key) and p.counts[key] > 0:
-                    result = '<div style="color:red">' + result + '</div>'
-                results.append(result)
-            elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
-            elapsed = elapsed.total_seconds()
-            results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
-            return render(request, 'main/upload-post.html', { 'results': results,
-                                                              'status': p.get_journal() })
-        else:
-            # form.errors is a dict containing error mesages, keys are field names, values are
-            # lists of error message strings.
-            message = ('<div data-alert class="alert-box warning radius">The file upload was '
-                       'invalid. Contact the site administrator if this problem persists.</div>')
-            return render(request, 'main/upload-post.html', { 'error': message })
-
-    return render(request, 'main/upload.html', { 'form': form_class, })
+    form = form_class(request.POST, request.FILES)
+    if form.is_valid():
+        file = request.FILES['file']
+        status = format_html("Processing uploaded file '{}', size {} bytes<br>\n", file.name,
+                             file.size)
+        # create parser instance and parse file
+        p = UploadParser(username=request.user.username, filename=file.name)
+        p.append_journal(status)
+        p.parse(file.file)
+        # build a list of natural-language descriptions of the results
+        results = []
+        for key, text in (
+                ('new_songs', '{} new song{}'),
+                ('existing_songs', '{} existing song{}'),
+                ('new_instances', '{} new song instance{}'),
+                ('existing_instances', '{} existing song instance{}'),
+                ('error_instances', '{} instance{} with errors'),
+                ('warning_instances', '{} instance{} with warnings'),
+                ('good_instances', '{} instance{} with no errors or warnings'),
+                ('new_titles', '{} new title{}'),
+                ('existing_titles', '{} existing title{}')):
+            result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
+            if ('warning' in key or 'error' in key) and p.counts[key] > 0:
+                result = '<div style="color:red">' + result + '</div>'
+            results.append(result)
+        elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
+        elapsed = elapsed.total_seconds()
+        results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
+        return render(request, 'main/upload-post.html', { 'results': results,
+                                                          'status': p.get_journal() })
+    else:
+        # form.errors is a dict containing error mesages, keys are field names, values are
+        # lists of error message strings.
+        message = ('<div data-alert class="alert-box warning radius">The file upload was '
+                   'invalid. Contact the site administrator if this problem persists.</div>')
+        return render(request, 'main/upload-post.html', { 'error': message })
