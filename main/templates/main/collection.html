@@ -6,7 +6,8 @@
 
 {% block content %}
 <p>Collection source: {{ collection.source }}</p>
-<p>Date added (localtime): {{ collection.date|localtime }}</p>
+{% get_current_timezone as timezone %}
+<p>Date added: {{ collection.date|localtime }} (server local time '{{ timezone }}')</p>
 {% with instances=view.collectioninstances %}
 <p>This collection contained:</p>
 <ul style="list-style: none;">

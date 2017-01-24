@@ -14,7 +14,7 @@
     {% endif %}
     <ul style="list-style: none;">
     {% for collection in collection_list %}
-        <li><a href="/collection/{{ collection.pk }}/">{{ collection.source }}</a></li>
+        <li><a href="/collection/{{ collection.pk }}/">{{ collection.source|truncatechars:80 }}</a></li>
     {% endfor %}
     </ul>
     <p>{% include 'main/pagination_nav.html' %}</p>

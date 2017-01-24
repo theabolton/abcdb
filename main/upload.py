@@ -24,24 +24,27 @@
 import collections
 import datetime
 import hashlib
+import io
 import operator
 import re
+import urllib.parse
 
 from django.db import transaction
 from django.shortcuts import render
 from django.utils.html import format_html
 
 from main.abcparser import ABCParser
-from main.forms import UploadForm
+from main.forms import UploadForm, FetchForm, ABCEntryForm
 from main.models import Collection, CollectionInstance, Instance, Song, Title
 import main.views
+
 
 # ========== ABCParser Subclass ==========
 
 class UploadParser(ABCParser):
     """Extends ABCParser to save tunes to the database, convert logging information to HTML, and
     gather statistics."""
-    def __init__(self, username=None, filename=None):
+    def __init__(self, username=None, filename=None, method=None):
         super().__init__()
         self.journal = ''
         self.counts = collections.Counter()
@@ -49,8 +52,12 @@ class UploadParser(ABCParser):
         self.tune_had_warnings = False
         # create Collection
         timestamp = datetime.datetime.now(datetime.timezone.utc)
-        source = 'upload {} {} {}'.format(username or '-', timestamp.strftime('%Y/%m/%d %H:%M:%S'),
-                                          filename or 'no filename')
+        if filename:
+            filename = ' ' + filename
+        else:
+            filename = ''
+        source = '{} {} {}{}'.format(method or 'unknown', username or '-',
+                                     timestamp.strftime('%Y/%m/%d %H:%M:%S'), filename)
         self.collection_inst, new = Collection.objects.update_or_create(source=source,
                                         defaults={'date': timestamp})
         if new:
@@ -168,43 +175,108 @@ class UploadParser(ABCParser):
 
 # ========== ABC Upload POST View ==========
 
+def upload_failed(request, reason, severity=''):
+    message = format_html('<div data-alert class="alert-box {} radius">{}</div>',
+                          severity, reason)
+    return render(request, 'main/upload-post.html', { 'error': message })
+
+
 def handle_upload(request):
     """Handle an upload POST request."""
-    form_class = UploadForm
 
-    form = form_class(request.POST, request.FILES)
-    if form.is_valid():
+    # ---- file upload ----
+    if request.FILES and 'file' in request.FILES:
+        form = UploadForm(request.POST, request.FILES)
+        if not form.is_valid():
+            # form.errors is a dict containing error mesages, keys are field names, values are
+            # lists of error message strings.
+            return upload_failed(request, 'The file upload was invalid. Contact the site '
+                                 'administrator if this problem persists', severity='warning')
         file = request.FILES['file']
         status = format_html("Processing uploaded file '{}', size {} bytes<br>\n", file.name,
                              file.size)
-        # create parser instance and parse file
-        p = UploadParser(username=request.user.username, filename=file.name)
-        p.append_journal(status)
-        p.parse(file.file)
-        # build a list of natural-language descriptions of the results
-        results = []
-        for key, text in (
-                ('new_songs', '{} new song{}'),
-                ('existing_songs', '{} existing song{}'),
-                ('new_instances', '{} new song instance{}'),
-                ('existing_instances', '{} existing song instance{}'),
-                ('error_instances', '{} instance{} with errors'),
-                ('warning_instances', '{} instance{} with warnings'),
-                ('good_instances', '{} instance{} with no errors or warnings'),
-                ('new_titles', '{} new title{}'),
-                ('existing_titles', '{} existing title{}')):
-            result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
-            if ('warning' in key or 'error' in key) and p.counts[key] > 0:
-                result = '<div style="color:red">' + result + '</div>'
-            results.append(result)
-        elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
-        elapsed = elapsed.total_seconds()
-        results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
-        return render(request, 'main/upload-post.html', { 'results': results,
-                                                          'status': p.get_journal() })
+        method = 'upload'
+        filename = file.name
+
+    # ---- URL fetch ----
+    elif 'url' in request.POST:
+        if not request.user.is_active or not request.user.is_staff:
+            return upload_failed(request, 'Sorry, but until the URL fetch is implemented in a '
+                                 'background process, it is only available to administrators.',
+                                 severity='info')
+        form = FetchForm(request.POST)
+        if not form.is_valid():
+            return upload_failed(request, 'No URL fetch attempted. Please enter a valid URL.')
+        url = form.cleaned_data['url']
+        import requests  # -FIX- this will move when ready for production
+        try:
+            r = requests.get(url, timeout=5)
+            r.raise_for_status()  # convert any non-200 status response to an exception, could
+                                  # handle 404 more gracefully
+        except requests.exceptions.RequestException as e:
+            message = "URL fetch failed with '{}'".format(str(e))  # -FIX- reveals too much?
+            return upload_failed(request, message, severity='warning')
+        TOO_LONG = 512 * 1024
+        if int(r.headers['content-length']) >= TOO_LONG:
+            return upload_failed(request, 'The fetched file is too long. Please download it '
+                                 'yourself, break it into smaller pieces, and upload them.',
+                                 severity='info')
+        file = io.BytesIO(r.content)
+        status = format_html("Processing file fetched from '{}', size {} bytes<br>\n", url,
+                             r.headers['content-length'])
+        method = 'fetch'
+        filename = url
+
+    # ---- ABC manual entry ----
+    elif 'text' in request.POST:
+        form = ABCEntryForm(request.POST)
+        if not form.is_valid():
+            return upload_failed(request, 'The submitted form was invalid.', severity='warning')
+        # Get the 'text' field as bytes. We can't use ``form.cleaned_data['text']`` because that
+        # would already be decoded to a Unicode str. It would be nice if urllib had a
+        # parse.parse_qsl_to_bytes.
+        match = re.search(b'text=([^&]+)', request.body)
+        if match:
+            text = urllib.parse.unquote_to_bytes(match.group(1).replace(b'+', b' '))
+        else:
+            return upload_failed(request, 'The submitted form was invalid.', severity='warning')
+        file = io.BytesIO(text)
+        # We could look in request.content_params for a hint as to the encoding, but apparently
+        # browsers are a bit rubbish at setting this correctly?
+        status = format_html("Processing ABC notation, size {} bytes<br>\n", len(text))
+        method = 'entry'
+        # Use the first title in the submission as the 'filename'
+        match = re.search(b'T:\\s*([ -~\\w\\d]+)', text)
+        if match:
+            filename = match.group(1).decode('utf-8', errors='ignore')
+        else:
+            filename = None
+
     else:
-        # form.errors is a dict containing error mesages, keys are field names, values are
-        # lists of error message strings.
-        message = ('<div data-alert class="alert-box warning radius">The file upload was '
-                   'invalid. Contact the site administrator if this problem persists.</div>')
-        return render(request, 'main/upload-post.html', { 'error': message })
+        return upload_failed(request, 'Bad form, dude.', severity='warning')
+
+    # create parser instance and parse file
+    p = UploadParser(username=request.user.username, filename=filename, method=method)
+    p.append_journal(status)
+    p.parse(file)
+    # build a list of natural-language descriptions of the results
+    results = []
+    for key, text in (
+            ('new_songs', '{} new song{}'),
+            ('existing_songs', '{} existing song{}'),
+            ('new_instances', '{} new song instance{}'),
+            ('existing_instances', '{} existing song instance{}'),
+            ('error_instances', '{} instance{} with errors'),
+            ('warning_instances', '{} instance{} with warnings'),
+            ('good_instances', '{} instance{} with no errors or warnings'),
+            ('new_titles', '{} new title{}'),
+            ('existing_titles', '{} existing title{}')):
+        result = text.format(p.counts[key], 's' if p.counts[key] != 1 else '')
+        if ('warning' in key or 'error' in key) and p.counts[key] > 0:
+            result = '<div style="color:red">' + result + '</div>'
+        results.append(result)
+    elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
+    elapsed = elapsed.total_seconds()
+    results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
+    return render(request, 'main/upload-post.html', { 'results': results,
+                                                      'status': p.get_journal() })

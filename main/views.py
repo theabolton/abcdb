@@ -31,7 +31,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import generic
 
-from main.forms import TitleSearchForm, UploadForm
+from main.forms import TitleSearchForm, UploadForm, FetchForm, ABCEntryForm
 from main.models import Collection, CollectionInstance, Instance, Song, Title
 from main.upload import handle_upload
 
@@ -205,7 +205,11 @@ def upload(request):
     if request.method == 'POST':
         return handle_upload(request)
 
-    return render(request, 'main/upload.html', { 'form': UploadForm, })
+    context = { 'form': UploadForm, 'entry_form': ABCEntryForm }
+    if request.user.is_active and request.user.is_staff:
+        # for now, URL fetch is only available to administrators
+        context.update(fetch_form=FetchForm)
+    return render(request, 'main/upload.html', context)
 
 
 # ========== Database Statistics View ==========

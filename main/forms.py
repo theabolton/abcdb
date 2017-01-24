@@ -31,9 +31,12 @@ class TitleSearchForm(forms.Form):
 
 
 class UploadForm(forms.Form):
-    file = forms.FileField()  # 'max_length' kwarg is the length of the filename, not of the file.
+    file = forms.FileField(label='File to Upload:')
 
-    # add a custom field label
-    # def __init__(self, *args, **kwargs):
-    #     super(UploadForm, self).__init__(*args, **kwargs)
-    #     self.fields['field_name'].label = "custom label"
+
+class FetchForm(forms.Form):
+    url = forms.URLField(label='URL to Fetch:', initial='http://localhost/abc/CR70.abc')
+
+
+class ABCEntryForm(forms.Form):
+    text = forms.CharField(widget=forms.Textarea, label='ABC Notation to Submit:')

@@ -3,9 +3,48 @@
 {% block headline %}Upload ABC{% endblock %}
 
 {% block content %}
+{% if fetch_form %}
+<p>You may upload an ABC file, fetch an ABC file from another server, or
+manually enter ABC notation below.</p>
+{% else %}
+<p>You may upload an ABC file, or enter ABC notation below.</p>
+{% endif %}
+<hr>
 <form role="form" action="" method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
+  <section class="row">
+    <div class="small-7 medium-9 large-10 columns">
+      {% csrf_token %}
+      {{ form.as_p }}
+    </div>
+    <div class="small-5 medium-3 large-2 columns">
+      <button type="submit">Upload</button>
+    </div>
+  </section>
+</form>
+{% if fetch_form %}
+<hr>
+<form role="form" action="" method="post">
+  <section class="row">
+    <div class="small-7 medium-9 large-10 columns">
+      {% csrf_token %}
+      {{ fetch_form.as_p }}
+    </div>
+    <div class="small-5 medium-3 large-2 columns">
+      <button type="submit">Fetch</button>
+    </div>
+  </section>
+</form>
+{% endif %}
+<hr>
+<form role="form" action="" method="post">
+  <section class="row">
+    <div class="small-7 medium-9 large-10 columns">
+      {% csrf_token %}
+      {{ entry_form.as_p }}
+    </div>
+    <div class="small-5 medium-3 large-2 columns">
+      <button type="submit">Submit</button>
+    </div>
+  </section>
 </form>
 {% endblock %}

@@ -113,6 +113,7 @@ Off-the-shelf technologies that are being used:
   * Django 1.10
   * SQLite 3.13.0
   * pytz 2016.10
+  * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_
   * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ PEG parser
   * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ front-end framework
   * `abcjs 3.0 <https://github.com/paulrosen/abcjs>`_ in-browser ABC renderer
@@ -278,6 +279,7 @@ Other software used in ABCdb is licensed under the following licenses:
   * Django: 3-clause BSD license
   * SQLite3: public domain
   * pytz: MIT(Expat) license
+  * requests: Apache 2.0 license
   * Arpeggio PEG parser: MIT(Expat) license
   * Zurb Foundation: MIT(Expat) license
   * abcjs: MIT(Expat) license
