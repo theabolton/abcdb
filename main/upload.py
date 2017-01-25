@@ -235,11 +235,14 @@ def handle_upload(request):
         # Get the 'text' field as bytes. We can't use ``form.cleaned_data['text']`` because that
         # would already be decoded to a Unicode str. It would be nice if urllib had a
         # parse.parse_qsl_to_bytes.
-        match = re.search(b'text=([^&]+)', request.body)
-        if match:
-            text = urllib.parse.unquote_to_bytes(match.group(1).replace(b'+', b' '))
-        else:
-            return upload_failed(request, 'The submitted form was invalid.', severity='warning')
+        text = None
+        fields = re.split(b'[&;]', request.body)
+        for field in fields:
+            if field.startswith(b'text='):
+                text = urllib.parse.unquote_to_bytes(field[5:].replace(b'+', b' '))
+                break
+        if not text:
+            return upload_failed(request, 'The submitted form was invalid (2).', severity='warning')
         file = io.BytesIO(text)
         # We could look in request.content_params for a hint as to the encoding, but apparently
         # browsers are a bit rubbish at setting this correctly?
