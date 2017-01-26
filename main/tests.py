@@ -33,7 +33,7 @@ def _create_instance():
     first_title.save()
     first_title.songs.add(song)
     instance = Instance(song=song, digest='2' * 40, first_title=first_title,
-                        text='T:Cast a Bell\nM:4/4\nL:1/4\nK:G\n'
+                        text='X:1\nT:Cast a Bell\nM:4/4\nL:1/4\nK:G\n'
                              'F/G/Afe/d/|fe/d/eE|F/G/Afe/d/|d/G/F/E/FD:|')
     instance.save()
     return instance
@@ -307,7 +307,7 @@ class downloadTests(TestCase):
     def test_download(self):
         instance = _create_instance()
         response = self.client.get('/download/{}/'.format(instance.id))
-        self.assertEquals(response.content, b'X:1\n' + instance.text.encode('utf-8'))
+        self.assertEquals(response.content, instance.text.encode('utf-8'))
 
 
 # ========== Upload Tests ==========
