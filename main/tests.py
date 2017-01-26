@@ -477,7 +477,6 @@ class uploadTests(TestCase):
                        urlencode({'url': TOO_BIG_FILE}),
                        content_type='application/x-www-form-urlencoded')
         self.assertContains(response, 'The fetched file is too long.')
-        # -FIX- test succeeds, but only after the big file is fetched into memory
 
     def test_upload_parse_errors_and_warnings(self):
         """Test that parse errors and warnings are reported correctly."""

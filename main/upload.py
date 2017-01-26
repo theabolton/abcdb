@@ -208,22 +208,26 @@ def handle_upload(request):
         if not form.is_valid():
             return upload_failed(request, 'No URL fetch attempted. Please enter a valid URL.')
         url = form.cleaned_data['url']
+        file = io.BytesIO()
+        file_length = 0
+        TOO_LONG = 512 * 1024
         import requests  # -FIX- this will move when ready for production
         try:
-            r = requests.get(url, timeout=5)
+            r = requests.get(url, timeout=5, stream=True)
+            for chunk in r.iter_content(4096):
+                file_length += file.write(chunk)
+                if file_length > TOO_LONG:
+                    return upload_failed(request, 'The fetched file is too long. Please download '
+                                         'it yourself, break it into smaller pieces, and upload '
+                                         'them.', severity='info')
             r.raise_for_status()  # convert any non-200 status response to an exception, could
                                   # handle 404 more gracefully
         except requests.exceptions.RequestException as e:
             message = "URL fetch failed with '{}'".format(str(e))  # -FIX- reveals too much?
             return upload_failed(request, message, severity='warning')
-        TOO_LONG = 512 * 1024
-        if int(r.headers['content-length']) >= TOO_LONG:
-            return upload_failed(request, 'The fetched file is too long. Please download it '
-                                 'yourself, break it into smaller pieces, and upload them.',
-                                 severity='info')
-        file = io.BytesIO(r.content)
+        file.seek(0)
         status = format_html("Processing file fetched from '{}', size {} bytes<br>\n", url,
-                             r.headers['content-length'])
+                             file_length)
         method = 'fetch'
         filename = url
 
