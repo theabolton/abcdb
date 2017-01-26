@@ -339,6 +339,11 @@ class ABCParser(metaclass=abc.ABCMeta):
         """
 
 
+    def start_tune(self):
+        """Virtual method called when the 'X' field beginning a new tune is found."""
+        pass
+
+
     @abc.abstractmethod
     def process_tune(self, tune):
         """Abstract method called when a complete ``Tune`` has been accumulated by the parser. This
