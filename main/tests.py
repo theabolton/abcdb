@@ -406,9 +406,6 @@ class uploadTests(TestCase):
         response = self.client.post('/upload/', { 'file': file })
         self.assertContains(response, 'processing complete.')
         self.assertContains(response, '1 existing song')
-        # -FIX- This demonstrates a design bug and race condition: if these two post requests
-        # happen within the same second, only one collection will be created (so the response here
-        # could contain 'new' or 'existing'.)
         self.assertContains(response, "Adding new collection 'upload testuser")
 
     def test_upload_file_invalid(self):

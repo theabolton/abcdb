@@ -30,6 +30,7 @@ import re
 import urllib.parse
 
 from django.db import transaction
+from django.db.utils import IntegrityError
 from django.shortcuts import render
 from django.utils.html import format_html
 
@@ -51,20 +52,25 @@ class UploadParser(ABCParser):
         self.tune_had_errors = False
         self.tune_had_warnings = False
         # create Collection
-        timestamp = datetime.datetime.now(datetime.timezone.utc)
+        time_format = '%Y/%m/%d %H:%M:%S'
         if filename:
             filename = ' ' + filename
         else:
             filename = ''
-        source = '{} {} {}{}'.format(method or 'unknown', username or '-',
-                                     timestamp.strftime('%Y/%m/%d %H:%M:%S'), filename)
-        self.collection_inst, new = Collection.objects.update_or_create(source=source,
-                                        defaults={'date': timestamp})
-        if new:
-            self.journal += format_html("Adding new collection '{}'<br>\n", source)
-        else:
-            self.journal += format_html("Found existing collection '{}'<br>\n", source)
-
+        while True: # loop until a Collection with unique source is saved
+            try:
+                timestamp = datetime.datetime.now(datetime.timezone.utc)
+                source = '{} {} {}{}'.format(method or 'unknown', username or '-',
+                                             timestamp.strftime(time_format), filename)
+                with transaction.atomic():
+                    self.collection_inst = Collection(source=source, date=timestamp)
+                    self.collection_inst.save()
+            except IntegrityError:  # source name was not unique
+                del self.collection_inst
+                time_format = '%Y/%m/%d %H:%M:%S.%f'  # try again with microseconds
+            else:
+                break
+        self.journal += format_html("Adding new collection '{}'<br>\n", source)
 
     def parse(self, filehandle):
         """Parse ABC upload, then save statistics to the collection."""
