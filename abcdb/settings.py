@@ -58,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-if ABCDB_DEPLOYMENT == 'development':
+if ABCDB_DEPLOYMENT == 'development' and os.path.exists(os.path.join(BASE_DIR, 'abcdb/debug.py')):
     MIDDLEWARE.append('abcdb.debug.SqlPrintingMiddleware')
 
 ROOT_URLCONF = 'abcdb.urls'
