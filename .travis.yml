@@ -1,0 +1,11 @@
+language: python
+python:
+  - "3.5"
+env:
+  - ABCDB_SECRET_KEY='travis_test_database_key_v&+rhgwyl^=cnorq@m-el*nb*'
+  - ABCDB_DEPLOYMENT='development'
+install:
+  - pip install -q -r requirements.txt
+script:
+  - python manage.py makemigrations
+  - python manage.py test main --exclude-tag fetch
