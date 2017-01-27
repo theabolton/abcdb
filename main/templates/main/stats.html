@@ -21,6 +21,7 @@ least one new instance, is {{ collection_instances }}.</p>
 counts are tabulated to show the frequency of occurrence of each count.
 Counts greater than 1 reflect successful identification of "musically
 identical" instances of the same song.</p>
+<!-- for testing: inst_per_song_histo {% for c, n in inst_per_song_histo %}{{ c }}:{{ n }}|{% endfor %} -->
 <table>
 <tr><th>Instances-per-Song Count</th><th>Frequency</th></tr>
 {% for c, n in inst_per_song_histo %}
@@ -32,6 +33,7 @@ identical" instances of the same song.</p>
 collections per instance. Counts greater than 1 reflect instances which
 were found in more than one collection, representing successful deduplication
 at the instance level.</p>
+<!-- for testing: coll_per_inst_histo {% for c, n in coll_per_inst_histo %}{{ c }}:{{ n }}|{% endfor %} -->
 <table>
 <tr><th>Collections-per-Instance Count</th><th>Frequency</th></tr>
 {% for c, n in coll_per_inst_histo %}
