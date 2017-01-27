@@ -3,7 +3,7 @@ ABCdb
 +++++
 
 ABCdb is a web-based tool for working with music notated in ABC
-format, providing database, rendering, and analysis functions.
+format, providing database, deduplication, rendering, and analysis functions.
 
 Overview
 ========
@@ -63,7 +63,7 @@ challenges:
 .. _`ABC standard`: http://abcnotation.com/wiki/abc:standard
 
 The goal of ABCdb is to provide an easy means for users to store,
-search, retrieve, and render songs in ABC format. It is my hope that
+search, retrieve, and render songs in ABC format. It is my goal that
 ABCdb will provide:
 
   * A database for storing ABC-format music.
@@ -82,8 +82,12 @@ ABCdb will provide:
     editor, file upload, and URL retrieval with optional web-scraping
     ability.
 
+  * Strong deduplication capability, such that "musically indentical"
+    instances of a song can be identified, while retaining the original
+    versions for users who wish to explore their differences.
+
   * Search facilities, beginning with a simple keyword search, and
-    later extended to include regular expression searching, and
+    later extending to include regular expression searching, and
     searching by attributes such as meter, key, or melodic contour.
 
   * Retrieval functions, both for single songs, and selected subsets
@@ -97,9 +101,7 @@ ABCdb will provide:
 Possible Feature List
 =====================
 
-* CRUD
 * Random Tune
-* Deduplication
 * Render with jcabc/ghostscript: PDF, SVG, PNG, SMF
 * Render SMF to audio with fluidsynth or similar
 * TuneGraph http://abcnotation.com/searchHelp#TuneGraph (maybe 3-D????)
@@ -109,10 +111,10 @@ Architecture
 
 Off-the-shelf technologies that are being used:
 
-  * Python 3.5
-  * Django 1.10
-  * SQLite 3.13.0
-  * pytz 2016.10
+  * `Python 3.5 <https://www.python.org/>`_
+  * `Django 1.10 <https:/www.djangoproject.com/>`_
+  * `SQLite 3.13.0 <https://www.sqlite.org/>`_
+  * `pytz 2016.10 <https://pythonhosted.org/pytz/>`_
   * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_
   * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ PEG parser
   * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ front-end framework
@@ -123,8 +125,8 @@ Original software that I have written:
   * The ABCdb Django app, including all models, views, forms, and templates
   * An ABC parser (see below for details)
   * A parse-tree visitor which reconstitutes the ABC in canonical form, for
-    de-duplication purposes.
-  * As-yet-minimal test coverage.
+    de-duplication purposes
+  * Test coverage
 
 Off-the-shelf technologies that may be used:
 
@@ -136,7 +138,7 @@ Off-the-shelf technologies that may be used:
 
 Original software yet to be written:
 
-  * code that drives rendering pipeline
+  * Code that drives rendering pipeline
 
 Schema
 ======
@@ -284,4 +286,6 @@ Other software used in ABCdb is licensed under the following licenses:
   * Zurb Foundation: MIT(Expat) license
   * abcjs: MIT(Expat) license
 
-See the file `LICENSES <../LICENSES>`_ for more information.
+See the file
+`LICENSES <https://github.com/smbolton/abcdb/blob/master/LICENSES>`_ for more
+information.

@@ -112,7 +112,7 @@ class InstanceView(generic.DetailView):
         return context
 
     def titles(self):
-        """Titles given to this instance's song (all of which may not be present in this
+        """Titles given to this instance's song (not all of which may be present in this
         instance.)"""
         return Title.objects.filter(songs=self.object.song)
 
