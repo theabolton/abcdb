@@ -1,0 +1,22 @@
+// rendered with 'dot -Tsvg <Boil_diagram.dot >Boil_diagram.svg'
+digraph "Boil Diagram" {
+ rankdir=LR;
+ node[fontsize=10];
+ Title1 [color=lightblue,label="Title1\n“Boil Them Cabbage”",style=filled,arrowtail=normal];
+ Title2 [color=lightblue,label="Title2\n“Boil 'Em Cabbage”",style=filled];
+ Title3 [color=lightblue,label="Title3\n“Bile 'Em Cabbage”",style=filled];
+ Song1 [color=lightpink,style=filled];
+ Song2 [color=lightpink,style=filled];
+ Instance1 [color=palegreen,style=filled];
+ Instance2 [color=palegreen,style=filled];
+ Instance3 [color=palegreen,style=filled];
+ Title1 -> { Song1 Song2 } // [dir=both]
+ Title2 -> { Song1 Song2 }
+ Title3 -> { Song1 }
+ Song1 -> { Instance1 Instance2 }
+ Song2 -> { Instance3 }
+ Instance1 -> Title1 [style=dotted,constraint=false]
+ //Instance2 -> Title3 [style=dotted,constraint=false,label="first_title",fontsize=8,headport=ne,tailport=nw]
+ Instance2 -> Title2 [style=dotted,constraint=false]
+ Instance3 -> Title1 [style=dotted,constraint=false]
+}

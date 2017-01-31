@@ -1,6 +1,6 @@
-+++++
-ABCdb
-+++++
+++++++++++++
+ABCdb README
+++++++++++++
 
 |license| |build| |docs|
 
@@ -22,7 +22,8 @@ format, providing database, deduplication, rendering, and analysis functions.
 Documentation
 =============
 
-You may read the full documentation on `Read the Docs <http://abcdb.readthedocs.io/en/latest/>`_.
+You may read the full documentation on `Read the Docs
+<http://abcdb.readthedocs.io/en/latest/project_description.html>`_.
 
 Installation
 ============
@@ -36,14 +37,15 @@ packages:
   * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_
   * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_
 
-Additional, two environment variables must be set:
+Additionally, two environment variables must be set:
 
   * ``ABCDB_SECRET_KEY`` - Set this to the database key.
 
   * ``ABCDB_DEPLOYMENT`` - Set this to either 'development' or 'production'.
-    When using 'development', ``settings.DEBUG`` is set to ``True``. When using 'production',
-    ``settings.DEBUG`` is ``False``, and there is more configuration you will need to do in
-    ``settings.DEBUG``.
+    The ``settings.DEBUG`` value is set based on this, ``True`` for
+    'development' and ``False`` for 'production'. When using 'production', you
+    will need to do more configuration in ``settings``, such as setting
+    ``ALLOWED_HOSTS`` and other security settings.
 
 A simple demonstration installation, using the Django development server, can be made something
 like this:
@@ -65,7 +67,8 @@ like this:
 
 Point your browser at the development server URL (http://127.0.0.1:8000/ by default), and log in
 as 'admin' to access all ABCdb functions. See the
-`Usage <http://abcdb.readthedocs.io/en/latest/#usage>`_ section of the documentation for details.
+`Usage <http://abcdb.readthedocs.io/en/latest/project_description.html#usage>`_ section of the
+documentation for details.
 
 License
 =======
@@ -94,7 +97,7 @@ License <https://en.wikipedia.org/wiki/MIT_License>`_:
   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-All included code (e.g. CSS or ./manage.py) is licensed under similar
+Any code included from other sources (e.g. CSS or ./manage.py) is licensed under similar
 non-copyleft licenses. See the file
 `LICENSES <https://github.com/smbolton/abcdb/blob/master/LICENSES>`_ for more
 information.

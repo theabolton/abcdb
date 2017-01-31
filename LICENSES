@@ -1,4 +1,4 @@
-All files in ABCdb are written, copyright, and licensed under the MIT(Expat)
+All files in ABCdb are written, copyright, and licensed under the MIT/Expat
 license by Sean Bolton, with the exception of these files from Django:
 
     manage.py

@@ -1,6 +1,6 @@
-+++++
-ABCdb
-+++++
++++++++++++++++++++++++++
+ABCdb Project Description
++++++++++++++++++++++++++
 
 ABCdb is a web-based tool for working with music notated in ABC
 format, providing database, deduplication, rendering, and analysis functions.
@@ -63,90 +63,193 @@ challenges:
 .. _`ABC standard`: http://abcnotation.com/wiki/abc:standard
 
 The goal of ABCdb is to provide an easy means for users to store,
-search, retrieve, and render songs in ABC format. It is my goal that
-ABCdb will provide:
+search, retrieve, and render songs in ABC format. Currently, ABCdb
+provides:
 
   * A database for storing ABC-format music.
 
-  * Individual user accounts, as well as a guest account.
+  * Individual user accounts.
 
   * Access controls, configurable for each user, to allow trusted
     users the full capabilities of the system, while avoiding
     problems that could be caused by accidental, intentional, or
     robotic misuse.
 
-  * Preferences, settable on a per-user basis, for such things as
-    rendering style and default search interface.
+  * Music entry and update facilities, including basic text entry,
+    file upload, and URL retrieval.
 
-  * Music entry and update facilities, to include a basic text
-    editor, file upload, and URL retrieval with optional web-scraping
-    ability.
+  * Robust handling of character encodings. Historically, ABC
+    notation has been written using many different character
+    encodings (ASCII, CP1252, ISO-8859-1, and UTF-8 are common), and
+    ABC software has often not handled this well. ABCdb strives to
+    properly convert everything to Unicode.
 
-  * Strong deduplication capability, such that "musically indentical"
+  * Deduplication capability, such that "musically indentical"
     instances of a song can be identified, while retaining the original
     versions for users who wish to explore their differences.
 
-  * Search facilities, beginning with a simple keyword search, and
-    later extending to include regular expression searching, and
-    searching by attributes such as meter, key, or melodic contour.
+  * Basic search and retrieval facilities.
 
-  * Retrieval functions, both for single songs, and selected subsets
-    of the database.
+  * Rendering is done in-browser, using Paul Rosen's
+    `abcjs <https://github.com/paulrosen/abcjs>`_.
 
-  * Rendering facilities, for standard music notation, tablature_,
-    `Standard MIDI Files`_, and audio files.
+Features planned for the next development milestone include:
+
+  * Enhanced rendering facilities. Server-side rendering of the ABC
+    can produce multiple output formats (PDF, SVG, PNG) in higher
+    quality than the in-browser rendering. Other potential features
+    include user configurability of the rendering (for example, for
+    large-print output), rendering of both standard musical notation
+    and tablature, and rendering to `Standard MIDI Files`_ or audio
+    files.
+
+  * Stronger deduplication facilities, as well as tools for
+    indentifying "near matches".
+
+  * Better search facilities, including full-text keyword search,
+    regular expression search, and searching by attributes such as
+    meter, key, or melodic contour.
+
+  * Preferences, settable on a per-user basis, for such things as
+    rendering style and default search interface.
+
+  * A better text editor for the manual ABC entry.
+
+  * Web-scraping ability, for retrieval of ABC embedded in HTML.
+
+  * An 'de-`mojibake`_-ize' function, which, under a user's guidance,
+    will heuristically attempt to undo past misinterpretation
+    of ABC character encoding. It is common to find ABC files
+    wherein UTF-8 was once misinterpreted as ISO-8859-1 'Latin-1'.
+
+  * Retrieval functions for selected subsets of the database,
+    allowing the user to build custom tunebooks.
 
 .. _`Standard MIDI Files`: https://en.wikipedia.org/wiki/MIDI#Standard_MIDI_files
+.. _`mojibake`: https://en.wikipedia.org/wiki/Mojibake
 
-Possible Feature List
-=====================
+Motivation
+==========
 
-* Random Tune
-* Render with jcabc/ghostscript: PDF, SVG, PNG, SMF
-* Render SMF to audio with fluidsynth or similar
-* TuneGraph http://abcnotation.com/searchHelp#TuneGraph (maybe 3-D????)
+There are a number of very good ABC-aggregating websites, which
+include many of the features of ABCdb. Examples include:
+
+* Chris Walshaw's `ABC Notation Home Page <http://abcnotation.com/>`_
+
+* John Chamber's `ABC Music Collection <http://trillian.mit.edu/~jc/music/abc/>`_
+
+So why create another ABC tool if many others exist? My primary
+motivations for ABCdb are:
+
+* That it serve as a vehicle for extending my Python and Django
+  skills, and as a demonstration or portfolio project showcasing
+  those skills.
+
+* That it be usable as a locally-installable ABC database tool.
+  Currently, the best ABC databases are all online tools. ABCdb is
+  itself a web application, but it can be easily run using the
+  Django development server and a SQLite database, with all required
+  components packaged within a single virtualenv.
+
+* That it provide a test bed for research into ABC deduplication.
+  Algorithmically determining the similarity of two ABC songs is a
+  tricky problem, and recent advances in data mining and machine
+  learning hold promise here.
+
+* I wanted a tool that I could be sure was handling character
+  encodings as intelligently as possible. I've too often seen titles
+  or lyrics savaged by software that does not handle this well.
+
+* As a musician, I am eager to have a good tool to manage my
+  personal collection of some 30,000 ABC songs!
+
+Songs, Instances, and Titles
+============================
+
+Before exploring how ABCdb is used, it is helpful to explain the difference
+between 'songs, 'instances', and 'titles'.  Consider two pieces of ABC
+notated-music, which are different, but which a musician would consider to
+express the same 'song'. This is possible because many aspects of ABC don't
+effect the music itself. For example, different titles could be given to the
+same song, or perhaps there are differences in spelling or whitespace.
+Information fields could be given in a different order, yet indicate the same
+result. (For further explanation of the possibilities, see `Database Schema`_
+below).
+
+We call these two different pieces of ABC music two 'instances' which
+express the same 'song'.
+
+To complicate matters, one instance of a song may have several titles, and
+any one title may be found in many different instances.  So, 'songs',
+'instances', and 'titles' are separate entities within the ABCdb database.
+Songs group like instances together, and titles are our most common means for
+finding the songs we're looking for.
+
+.. image:: Boil_diagram.svg
+   :width: 85%
+   :alt: Relationship Between Song, Instance, and Title
+
+In the diagram above, notice how each title links to the *songs* in whose
+instances the title was found. This is because we typically want to find all
+the instances of a song that were ever labelled with a particular title, even
+if a particular instance didn't contain that title (it's the same song,
+remember?) This may seem confusing at first, but with use it starts to feel
+natural.
+
+Notice also that each instance links back to its first or primary title (the
+dashed lines in the diagram above.) When working with instances, this helps
+them appear less anonymous.
+
+Installation
+============
+
+For information on installing ABCdb, see the `README
+<README.html#installation>`_.
+
+Usage
+=====
+
+*To be written.*
 
 Architecture
 ============
 
-Off-the-shelf technologies that are being used:
+ABCdb presents a somewhat simple exterior, yet there is much going on "under
+the hood". The pieces of ABCdb that I have written are:
+
+  * The ABCdb Django application, including all models, views, forms, and templates
+  * An ABC parser (described in detail below)
+  * A parse-tree visitor which reconstitutes parsed ABC in canonical form, for
+    de-duplication purposes
+  * Test coverage
+  * Documentation
+
+Off-the-shelf software that ABCdb uses:
 
   * `Python 3.5 <https://www.python.org/>`_
   * `Django 1.10 <https:/www.djangoproject.com/>`_
-  * `SQLite 3.13.0 <https://www.sqlite.org/>`_
-  * `pytz 2016.10 <https://pythonhosted.org/pytz/>`_
-  * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_
-  * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ PEG parser
-  * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ front-end framework
-  * `abcjs 3.0 <https://github.com/paulrosen/abcjs>`_ in-browser ABC renderer
+  * `pytz 2016.10 <https://pythonhosted.org/pytz/>`_ (timezone support)
+  * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_ (ABC URL fetch)
+  * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ (PEG parser)
+  * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ (front-end framework)
+  * `abcjs 3.0 <https://github.com/paulrosen/abcjs>`_ (in-browser ABC renderer)
 
-Original software that I have written:
+ABCdb has been tested with both `SQLite 3.13.0 <https://www.sqlite.org/>`_ and
+`PostgreSQL 9.6.0 <https://www.postgresql.org/>`_ databases.
 
-  * The ABCdb Django app, including all models, views, forms, and templates
-  * An ABC parser (see below for details)
-  * A parse-tree visitor which reconstitutes the ABC in canonical form, for
-    de-duplication purposes
-  * Test coverage
+Documentation for ABCdb is produced in
+`reStructuredText <http://docutils.sourceforge.net/rst.html>`_ markup and
+rendered using `Sphinx <http://www.sphinx-doc.org/en/stable/>`_.
 
-Off-the-shelf technologies that may be used:
+Database Schema
+===============
 
-  * MySQL/MariaDB, PostgreSQL for production database use
-  * a JavaScript text editor
-  * rendering pipeline: jcabc2ps, ghostscript, ImageMagick,
-    FluidSynth
-  * reStructuredText / DocUtils / Sphinx for documentation
+First, let us be more precise than the description of 'song', 'instance', and
+'title' given `above <#songs-instances-and-titles>`_.
 
-Original software yet to be written:
-
-  * Code that drives rendering pipeline
-
-Schema
-======
-
-To begin, an explanation of ‘song’ versus ‘instance’ will be useful.
-Consider two different pieces of ABC notated-music which produce
-indentical renderings. This is possible due to a number of factors
-which do not affect the rendered output:
+There is a one-to-many relationship between a song and its instances. Each
+unique instance of a song describes the same essential music due to a number
+of factors which do not affect the rendered output:
 
   * Semantically identical but textually different field values
   * Line re-ordering
@@ -159,100 +262,104 @@ which do not affect the rendered output:
   * Differences in whitespace
   * Comments
 
-In this case each of the two unique pieces of ABC notation is called
-an ‘instance’, and both instances describe the same ‘song’, although
-likely with different metadata. Storing each ‘instance’ allows the
-system to track every variation of a ‘song’; relating each
-‘instance’ to a canonical ‘song’ facilitates deduplication.
+Storing each instance allows the system to track every variation of a song;
+relating each instance to a canonical song facilitates deduplication.
 
-In order to derive the ‘song’ from an ‘instance’, the ABC is parsed
+In order to derive the ‘song’ from an instance, the ABC is parsed
 then reconstituted in a strict way, with all non-essential metadata
 stripped, lines canonically reordered, and fields normalized. This
 reconstituted ABC is then passed through a cryptographic hash
 function (e.g. MD5 or SHA-1), and the resulting digest is considered
-the canonical rendering of the ‘song’ expressed by that instance.
+the canonical rendering of the song expressed by that instance.
 
-Note that the ‘song’ is just the hash, and exists to group musically
+Note that the ‘song’ is just this hash, and exists to group musically
 identical instances. Visual and audio renderings must be made from
 one of the associated instances.
 
-Principal database tables / Django objects:
+The titles of an ABC song are of course found in its instances, yet in ABCdb
+titles are linked to *songs* in a many-to-many relationship. For the user,
+this results in more natural navigation--for example, if they are looking for
+all instances of a song called "Boil Them Cabbage Down", they would not want
+to miss one just because it is called "Bile 'Em Cabbace Down". However, it is
+still convenient to associate a title with each instance, so each instance has
+a one-to-one relationship with its first or primary title.
 
-.. code:: python
+ABC music is typically uploaded into ABCdb in files, which often contain
+multiple song instances. ABCdb tracks where each instance comes from by
+linking it to a 'collection'. Note that a particular instance may be seen in
+multiple collections, and that a particular collection may contain multiple
+instances, so there is a many-to-many relationship between instances and
+collections.
 
-  class Song(models.Model):
-      digest = models.CharField(max_length=40, unique=True, db_index=True)
+Parser
+======
 
-  class Instance(models.Model):
-      # CREATE TABLE song_instance (song_id INTEGER, instance_id INTEGER);
-      # CREATE UNIQUE INDEX song_instance_index ON song_instance (song_id, instance_id);
-      song = models.ForeignKey(Song, on_delete=models.PROTECT)
-      digest = models.CharField(max_length=40, unique=True, db_index=True)
-      text = models.TextField()
+The ABC parser is the heart of ABCdb's deduplication ability. ABC notation
+grew rather organically, without any sort of formal standard for much of its
+early years, and many of the programs written for ABC added their own
+extensions to ABC. So parsing ABC is a bit tricky: the grammar is ambiguous,
+and many variations must be accounted for.
 
-  class Title(models.Model):
-      # CREATE TABLE title_song (title_id INTEGER, song_id INTEGER);
-      # CREATE UNIQUE INDEX title_song_index ON title_song (title_id, song_id);
-      songs = models.ManyToManyField(Song)
-      title = models.CharField(max_length=80, unique=True, db_index=True)
-
-  class Collection(models.Model):
-      # CREATE TABLE collection_instance (collection_id INTEGER, instance_id INTEGER, X INTEGER);
-      # !FIX! note the 'X' field! need to add 'through = ' to the ManyToManyField below!
-      # https://docs.djangoproject.com/en/1.10/ref/models/fields/#manytomanyfield
-      # CREATE UNIQUE INDEX collection_instance_index ON collection_instance (collection_id, instance_id);
-      instance = models.ManyToManyField(Instance)
-      URL = models.URLField(unique=True)  # 200 char limit
-
-Access Control
-==============
-* Guest account is read-only, with limited rendering allowance.
-* Separate permissions for:
-
-    + Add new song
-    + Edit existing song
-    + Upload ABC file
-    + Fetch ABC URL
-    + Render multiple songs at once
-    + Render to audio
-    + Download multiple songs at once
-    + Use advanced search functions
-
-Global Configuration
-====================
-* Have a 'portfolio/showcase' switch which determines which welcome
-  page is presented by default?
-
-Individual Preferences
-======================
-* Allow configuration of important elements of the jcabc2ps format file used.
-
-Site Map / Hierarchy
-====================
-
-* Django admin
-
-* User side:
+Here is fairly simple example of what the parser must parse:
 
   ::
 
-    index.html     -- redirects to welcome.html or portfolio.html
-    welcome.html   -- welcome page for regular users
-    portfolio.html -- introductory page for those evaluating my coding
+    X:22
+    T:Boil 'Em Cabbage Down
+    S:The Darlings on The Andy Griffith Show
+    M:2/4
+    L:1/4
+    K:D
+    "D"A/2A/4A/4 A/2A/2|"G"B/2B/4B/4 B/2B/2|"D"A/2A/4A/4 A/2F/2|"A7"E2|\
+    "D"A/2A/4A/4 A/2A/2|"G"B/2B/4B/4 B/2B/2|"A7"A/2c/4c/4 e/2c/2| [1"D"d2:|
+     [2"D"d3/2|:A/2|"D"d/2d/4d/4 f/2A/2|d3/2A/2|"D"d/2d/4d/4 c/2B/2|"A7"A3/2A/2|\
+    "D"d/2d/4d/4 d/2d/2|"G"B/2B/4B/4 B/2B/2|"A7"A/2c/4c/4 e/2c/2|"D"d3/2:|
 
-Shortcomings
-============
-* As it exists now, the system tracks from where a particular ABC
-  instance came, as its 'Collection'. It doesn't keep the original
-  ABC file, nor does it record when the file was imported. The
-  present 'Collection' information is somewhat useful, but ignores
-  the reality that both web resources and local ABC files often
-  change over time.
+
+The first six lines are 'information fields', with the first letter of the
+line indicating what sort of information it provides about the tune. The last
+four lines (not counting the empty line which terminates the tune) are the
+'music code', and specify the actual notes and timing of the tune.
+
+This two-part character of ABC tunes led me to design a hybrid parser, with a
+hand-written top-down parser to classify the lines of an ABC file, and a
+recursive-descent (parsing expression grammar, or PEG) parser to parse the
+music code. Some of the reasons behind this design include:
+
+* Writing a parser using traditional tools that use production grammars (e.g.
+  BNF) to specify the grammar is (as reported by others) quite a chore because
+  of the ambiguity and informality of the ABC specification. In contrast,
+  using recognition grammar-based tools (e.g. regular expressions or PEG
+  parsers) tends to be much easier for ABC.
+
+* PEG parsers are easy to write!
+
+* Unfortunately, PEG parsers can be slow or use lots of memory, but because of
+  the line-oriented nature of ABC, ABCdb can use a PEG parser to parse a line
+  at a time (typically less than 100 bytes), with reasonable efficiency.
+
+* An information field may specify (change) the character encoding of the
+  following lines. The current ABC specification tries to be clear that most
+  of ABC being ASCII, except for "text strings" (such as tune titles), for
+  which it is recommended that the encoding be specified. The top-half parser
+  can respond to these character set changes, allowing it to pass only
+  pre-decoded Unicode to the music code PEG parser.
+
+Having the top-half parser handle the character encoding significantly
+simplifies the parser as a whole. Because a traditional PEG parser returns no
+results until its entire parse completes, the bottom-half PEG parser can't
+respond to the encoding directives while parsing. (Some parsers, such as
+`funcparselib <https://github.com/vlasovskikh/funcparserlib>`_, allow for
+executing certain actions at the time of a rule match, which together with a
+carefully constructed grammar, would allow a single parser to parse ABC while
+responding to character encoding changes. `Arpeggio
+<https://github.com/igordejanovic/Arpeggio>`_, the PEG parser used in ABCdb,
+does not (yet) have this ability.)
 
 Licenses
 ========
 ABCdb is written and copyrighted by Sean Bolton, and licensed under the
-MIT(Expat) license:
+MIT/Expat license:
 
   Copyright © 2017 Sean Bolton.
 
@@ -275,16 +382,17 @@ MIT(Expat) license:
   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-Other software used in ABCdb is licensed under the following licenses:
+Other software used in or by ABCdb is licensed under the following licenses:
 
   * Python: Python Software Foundation License
   * Django: 3-clause BSD license
   * SQLite3: public domain
-  * pytz: MIT(Expat) license
+  * PostgreSQL: PostgreSQL License (MIT-like)
+  * pytz: MIT/Expat license
   * requests: Apache 2.0 license
-  * Arpeggio PEG parser: MIT(Expat) license
-  * Zurb Foundation: MIT(Expat) license
-  * abcjs: MIT(Expat) license
+  * Arpeggio PEG parser: MIT/Expat license
+  * Zurb Foundation: MIT/Expat license
+  * abcjs: MIT/Expat license
 
 See the file
 `LICENSES <https://github.com/smbolton/abcdb/blob/master/LICENSES>`_ for more
