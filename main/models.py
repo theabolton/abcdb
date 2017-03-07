@@ -38,9 +38,9 @@ class Song(models.Model):
 
 class Title(models.Model):
     songs = models.ManyToManyField(Song)
-    title = models.CharField(max_length=80, unique=True, db_index=True)
+    title = models.CharField(max_length=200, unique=True, db_index=True)
     # flat_title is a lowercased, diacritic-stripped copy of title
-    flat_title = models.CharField(max_length=80, db_index=True)
+    flat_title = models.CharField(max_length=200, db_index=True)
 
     def __str__(self):
         return self.title
