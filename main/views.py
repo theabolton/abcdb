@@ -233,7 +233,7 @@ def stats(request):
     collection_instances = (
         Collection.objects.filter(new_instances__gt=0)
             .aggregate(total=Sum(F('existing_instances')+F('new_instances')))['total'])
-    if collection_instances > 0:
+    if collection_instances and collection_instances > 0:
         coll_to_inst_dedup = '{:.2f}'.format((collection_instances - instances) /
                                              collection_instances * 100.0)
     else:
