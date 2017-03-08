@@ -21,14 +21,19 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import re
 import unicodedata
+
+from graphviz import Digraph
 
 from django.db import connection
 from django.db.models import F, Q, Sum
 from django.contrib.auth.decorators import permission_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.utils.html import format_html
 from django.views import generic
 
 from main.forms import TitleSearchForm, UploadForm, FetchForm, ABCEntryForm
@@ -117,28 +122,75 @@ class InstanceView(generic.DetailView):
         return Title.objects.filter(songs=self.object.song)
 
 
-class SongView(generic.DetailView):
-    """A 'Song' is just a hash used to identify "musically identical" instances, but it is useful
-    to list the instances and titles that link to it."""
-    model = Song
-    template_name = 'main/song.html'
+def song_view(request, pk=None):
+    """A 'Song' is just a hash used to identify "musically identical" instances. Create a graph to
+    illustrate the linkage between the instances and titles that link to it."""
 
-    def collections(self):
-        """Collections in which this song appeared."""
-        return Collection.objects.filter(instances__song=self.object.id)
+    def ellipsize_title(t):
+        if len(t) > 30:
+            return t[:28] + '...'
+        else:
+            return t
 
-    def instances(self):
-        """Instances of this song, as a list of dicts, available in the template as
-        view.instances."""
-        instances = (Instance.objects.filter(song=self.object.id)
-                        .select_related('first_title')
-                        .defer('text', 'digest'))
-        context = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) } for i in instances]
-        return context
+    try:
+        song = Song.objects.get(pk=pk)
+    except ObjectDoesNotExist:
+        return render(request, 'main/song.html', { 'song': { 'id': pk }, 'error': True })
+    context = { 'song': song }
 
-    def titles(self):
-        """Titles given to any instance of this song."""
-        return Title.objects.filter(songs=self.object.pk).order_by('title')
+    # initialize graph with a node for this song
+    dot = Digraph(format='svg', name=format_html('Song {} Graph', pk),
+                  node_attr={'fontsize': '10'})
+    dot.graph_attr['rankdir'] = 'LR'
+    dot.node('S', 'Song {}'.format(pk), URL='/song/{}/'.format(pk),
+             color='lightpink', style='filled')
+
+    # instances
+    instances = (Instance.objects.filter(song=pk)
+                    .select_related('first_title')
+                    .defer('text', 'digest'))
+    context['instances'] = [{ 'pk': i.pk, 'instance': _generate_instance_name(i) }
+                                for i in instances]
+    for i in instances:
+        isym = 'I' + str(i.pk)
+        dot.node(isym,
+                 format_html('Instance {}\n"{}"', i.pk, ellipsize_title(i.first_title.title)),
+                 URL='/instance/{}/'.format(i.pk),
+                 color='palegreen', style='filled')
+        dot.edge('S', isym)
+
+    # titles: Titles given to any instance of this song
+    # -FIX- listing of other songs could be reduced to a single extra query
+    titles = Title.objects.filter(songs=pk).order_by('title')
+    context['titles'] = titles
+    songs_seen = set()
+    for t in titles:
+        tsym = 'T' + str(t.pk)
+        dot.node(tsym, format_html('Title {}\n"{}"', t.pk, ellipsize_title(t.title)),
+                 URL='/title/{}/'.format(t.pk),
+                 color='lightblue', style='filled')
+        dot.edge(tsym, 'S')
+        songs = Song.objects.filter(title=t.pk).order_by('id')
+        for s in songs:
+            if s.pk == int(pk):
+                continue
+            ssym = 'S' + str(s.pk)
+            if s.pk not in songs_seen:
+                songs_seen.add(s.pk)
+                dot.node(ssym, 'Song {}'.format(s.pk),
+                         URL='/song/{}/'.format(s.pk))
+            dot.edge(tsym, ssym, style='dotted') # "constraint='false'" makes it messier
+
+    # render svg
+    svg = dot.pipe().decode('utf-8')
+    # strip XML and DTD declarations from SVG because we are embedding it
+    svg = re.sub('^<\\?xml[^>]*>\\s*<!DOCTYPE[^>]*>', '', svg)
+    context['svg'] = svg
+
+    # collections: Collections in which this song appeared
+    context['collections'] = Collection.objects.filter(instances__song=pk)
+
+    return render(request, 'main/song.html', context)
 
 
 class TitleView(generic.DetailView):

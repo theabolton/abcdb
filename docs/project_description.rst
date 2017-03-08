@@ -231,6 +231,8 @@ Off-the-shelf software that ABCdb uses:
   * `pytz 2016.10 <https://pythonhosted.org/pytz/>`_ (timezone support)
   * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_ (ABC URL fetch)
   * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ (PEG parser)
+  * `Graphviz 0.5.2 <https://github.com/xflr6/graphviz>`_ (Python driver for
+    `Graphviz <http://www.graphviz.org/>`_ graph visualization software)
   * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ (front-end framework)
   * `abcjs 3.0 <https://github.com/paulrosen/abcjs>`_ (in-browser ABC renderer)
 
@@ -340,7 +342,7 @@ music code. Some of the reasons behind this design include:
 
 * An information field may specify (change) the character encoding of the
   following lines. The current ABC specification tries to be clear that most
-  of ABC being ASCII, except for "text strings" (such as tune titles), for
+  of ABC is plain ASCII, except for "text strings" (such as tune titles), for
   which it is recommended that the encoding be specified. The top-half parser
   can respond to these character set changes, allowing it to pass only
   pre-decoded Unicode to the music code PEG parser.
@@ -391,6 +393,7 @@ Other software used in or by ABCdb is licensed under the following licenses:
   * pytz: MIT/Expat license
   * requests: Apache 2.0 license
   * Arpeggio PEG parser: MIT/Expat license
+  * Graphviz python module: MIT/Expat license
   * Zurb Foundation: MIT/Expat license
   * abcjs: MIT/Expat license
 

@@ -3,17 +3,22 @@
 {% block headline %}Song {{ song.id }}{% endblock %}
 
 {% block content %}
-<p>Digest: {{ song.digest }}</p>
+{% if error %}
+<p>The requested song could not be found.</p>
+{% else %}
+{{ svg|safe }}
 <p>Titles used for any instance of this song include:</p>
 <ul style="list-style: none;">
-{% for t in view.titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
+{% for t in titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
 </ul>
 <p>Instances of this song:</p>
 <ul style="list-style: none;">
-{% for i in view.instances %}<li><a href="/instance/{{ i.pk }}/">{{ i.instance }}</a></li>{% endfor %}
+{% for i in instances %}<li><a href="/instance/{{ i.pk }}/">{{ i.instance }}</a></li>{% endfor %}
 </ul>
 <p>Collections in which this song appeared:</p>
 <ul style="list-style: none;">
-{% for c in view.collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.source }}</a></li>{% endfor %}
+{% for c in collections %}<li><a href="/collection/{{ c.pk }}/">{{ c.source }}</a></li>{% endfor %}
 </ul>
+<p>Song digest: {{ song.digest }}</p>
+{% endif %}
 {% endblock %}

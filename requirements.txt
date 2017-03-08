@@ -1,4 +1,5 @@
 Django==1.10.2
 git+git://github.com/igordejanovic/Arpeggio.git@a305f27eb00c8990bdc814d540ef0fa0ad89c9fd#egg=arpeggio
+graphviz==0.5.2
 pytz==2016.10
 requests==2.12.5
