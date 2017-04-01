@@ -21,6 +21,8 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import json
+
 from django.test import TestCase, tag
 
 from .models import Song, Instance, Title, Collection, CollectionInstance
@@ -172,6 +174,75 @@ class UtilityFunctionTests(TestCase):
         self.assertEqual(remove_diacritics('äbçdèfĝhīj́'), 'abcdefghij')
 
 
+class ajax_graph_viewTests(TestCase):
+    def decode_json(self, response):
+        try:
+            return json.loads(response.content.decode('utf-8'))
+        except json.JSONDecodeError:
+            self.fail('response was not valid JSON')
+
+    def test_ajax_graph_view(self):
+        # create simple test graph:
+        data = _create_simple_data()
+        # add a few additional nodes (existing nodes are parenthesized):
+        #         (Song1)             (Collection1)
+        #        /                   /
+        #  Title4 - Song2 - Instance3 - first_title:Title4
+        song = Song(digest='2' * 40)
+        song.save()
+        data['Song2'] = song
+        title = Title(title='Title4')
+        title.save()
+        title.songs.add(song)
+        title.songs.add(data['Song1'])
+        data[title.title] = title
+        instance = Instance(song=song, digest='4' * 40, first_title=data['Title4'],
+                        text='T:Title1\nT:Title2\nM:4/4\nL:1/4\nK:G\n'
+                             'A/B/cfe/d/|fe/d/eE|F/G/Afe/d/|d/G/F/E/FD:|')
+        instance.save()
+        data['Instance3'] = instance
+        CollectionInstance(collection=data['Collection1'], instance=instance, X=2,
+                           line_number=30).save()
+        # An HTML request to the Ajax URL should return a redirect to the base graph URL.
+        response = self.client.get('/ajax/graph/s1/')
+        self.assertRedirects(response, '/graph/s1/')
+        # An Ajax request with an invalid node id should return a JSON error object.
+        response = self.client.get('/ajax/graph/s999999999/', HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEquals(response._headers['content-type'][1], 'application/json')
+        response_json = self.decode_json(response)
+        self.assertTrue(response_json['error'])
+        self.assertIn('not found', response_json['description'])
+        # An Ajax request with valid node id should return the graph for that node.
+        response = self.client.get('/ajax/graph/s{}/'.format(data['Song1'].id),
+                                   HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEquals(response._headers['content-type'][1], 'application/json')
+        response_json = self.decode_json(response)
+        # a quick check for a specific set of keys:
+        #   self.assertCountEqual(response_json, { 'nodes': True, 'links': True })
+        self.assertIsNotNone(response_json.get('nodes'), "JSON does not contain 'nodes' object")
+        self.assertIsNotNone(response_json.get('links'), "JSON does not contain 'links' object")
+        # check that the graph is correct
+        response_json['nodes'].sort(key=lambda n: n['id'] + '|' + n.get('title', ''))
+        self.assertListEqual(response_json['nodes'],
+                             [{'id': 'i1', 'title': 'Title1'},
+                              {'id': 'i2', 'title': 'Title2'},
+                              {'id': 's1'},
+                              {'id': 's2'},
+                              {'id': 't1', 'title': 'Title1'},
+                              {'id': 't2', 'title': 'Title2'},
+                              {'id': 't3', 'title': 'Title3'},
+                              {'id': 't4', 'title': 'Title4'}])
+        response_json['links'].sort(key=lambda n: n['source'] + '|' + n['target'])
+        self.assertListEqual(response_json['links'],
+                             [{'source': 's1', 'target': 'i1'},
+                              {'source': 's1', 'target': 'i2'},
+                              {'source': 't1', 'target': 's1'},
+                              {'source': 't2', 'target': 's1'},
+                              {'source': 't3', 'target': 's1'},
+                              {'source': 't4', 'target': 's1'},
+                              {'source': 't4', 'target': 's2'}])
+
+
 class CollectionViewTest(TestCase):
     def test_CollectionView(self):
         import datetime
@@ -203,6 +274,22 @@ class CollectionsViewTests(TestCase):
         self.assertContains(response, 'There are two collections')
         self.assertContains(response, 'Collection 1')
         self.assertContains(response, 'Collection 2')
+
+
+class graph_viewTests(TestCase):
+    def test_graph_view(self):
+        # create simple test graph:
+        data = _create_simple_data()
+        # A request with an invalid node id should return a simple message and a link to the
+        # search page.
+        response = self.client.get('/graph/t999999999/')
+        self.assertContains(response, 'not found.')
+        self.assertContains(response, '<a href="/search/">')
+        # A request with a valid node id should serve the HTML for the client-side tune graph
+        # explorer.
+        response = self.client.get('/graph/s{}/'.format(data['Song1'].id))
+        self.assertContains(response, '<div id="graph">')
+        self.assertContains(response, '<script src="/static/graph.js">')
 
 
 class InstanceViewTests(TestCase):
