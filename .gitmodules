@@ -1,0 +1,3 @@
+[submodule "dagre-d3v4"]
+	path = dagre-d3v4
+	url = https://github.com/smbolton/dagre-d3v4.git
