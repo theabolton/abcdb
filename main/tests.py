@@ -289,7 +289,7 @@ class graph_viewTests(TestCase):
         # explorer.
         response = self.client.get('/graph/s{}/'.format(data['Song1'].id))
         self.assertContains(response, '<div id="graph">')
-        self.assertContains(response, '<script src="/static/graph.js">')
+        self.assertContains(response, '<script src="/static/graph.js"')
 
 
 class InstanceViewTests(TestCase):
