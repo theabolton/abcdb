@@ -21,6 +21,7 @@
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+import json
 import re
 import unicodedata
 
@@ -31,7 +32,7 @@ from django.db.models import F, Q, Sum
 from django.contrib.auth.decorators import permission_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils.html import format_html
 from django.views import generic
@@ -42,6 +43,12 @@ from main.upload import handle_upload
 
 
 # ========== Utility Functions ==========
+
+def _ellipsize(string, maxlength):
+    if len(string) > maxlength:
+        return string[:maxlength - 3] + '...'
+    else:
+        return string
 
 def _generate_instance_name(instance):
     """Return a string describing the instance, e.g.
@@ -62,6 +69,75 @@ def remove_diacritics(s):
 
 
 # ========== User-oriented Model Views ==========
+
+def ajax_graph_view(request, tuneid=None):
+    """View for client-side tune graph explorer which returns JSON describing the graph of titles,
+    songs, and instances for the requested object."""
+
+    if not request.is_ajax():
+        return HttpResponseRedirect('/graph/{}/'.format(tuneid))
+
+    node_type = tuneid[:1]
+    pk = tuneid[1:]
+    try:
+        if node_type == 's':
+            song = Song.objects.get(pk=pk)
+        elif node_type in ('t', 'i', 'c'):
+            return JsonResponse({ 'error': True, 'description': 'Unsupported node type.' }) # !FIX!
+        else:
+            raise ObjectDoesNotExist
+    except ObjectDoesNotExist:
+        return JsonResponse({ 'error': True, 'description': 'The requested object was not found.' })
+
+    graph = { "nodes": [], "links": [] }
+
+    # initialize graph with a node for this song
+    graph['nodes'].append({ 'id': 's' + pk })
+
+    # instances
+    instances = (Instance.objects.filter(song=pk)
+                    .select_related('first_title')
+                    .defer('text', 'digest'))
+    for i in instances:
+        isym = 'I' + str(i.pk)
+        graph['nodes'].append({
+                'id': 'i' + str(i.pk),
+                'title': _ellipsize(i.first_title.title, 30)
+            })
+        graph['links'].append({
+                'source': 's' + str(pk),
+                'target': 'i' + str(i.pk)
+            })
+
+    # titles: Titles given to any instance of this song
+    # -FIX- listing of other songs could be reduced to a single extra query
+    titles = Title.objects.filter(songs=pk).order_by('title')
+    songs_seen = set()
+    for t in titles:
+        tsym = 'T' + str(t.pk)
+        graph['nodes'].append({
+                'id': 't' + str(t.pk),
+                'title': _ellipsize(t.title, 30)
+            })
+        graph['links'].append({
+                'source': 't' + str(t.pk),
+                'target': 's' + str(pk)
+            })
+        songs = Song.objects.filter(title=t.pk).order_by('id')
+        for s in songs:
+            if s.pk == int(pk):
+                continue
+            ssym = 'S' + str(s.pk)
+            if s.pk not in songs_seen:
+                songs_seen.add(s.pk)
+                graph['nodes'].append({ 'id': 's' + str(s.pk) })
+            graph['links'].append({
+                    'source': 't' + str(t.pk),
+                    'target': 's' + str(s.pk)
+                })
+
+    return JsonResponse(graph)
+
 
 class CollectionView(generic.DetailView):
     model = Collection
@@ -94,6 +170,30 @@ class CollectionsView(generic.ListView):
 
     def get_queryset(self):
         return Collection.objects.all().order_by('-date')
+
+
+def graph_view(request, tuneid=None):
+    """View for the client-side tune graph explorer. Return the HTML need to set up the page; n.b.
+    ajax_graph_view() above which serves the graph JSON."""
+
+    # check that focus node exists
+    node_type = tuneid[:1]
+    pk = tuneid[1:]
+    try:
+        if node_type == 's':
+            Song.objects.get(pk=pk)
+        elif node_type == 't':
+            Title.objects.get(pk=pk)
+        elif node_type == 'i':
+            Instance.objects.get(pk=pk)
+        elif node_type == 'c':
+            Collection.object.get(pk=pk)
+        else:
+            raise ObjectDoesNotExist
+    except ObjectDoesNotExist:
+        return render(request, 'main/graph.html', { 'error': True })
+
+    return render(request, 'main/graph.html')
 
 
 class InstanceView(generic.DetailView):

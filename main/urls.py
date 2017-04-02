@@ -27,9 +27,11 @@ from . import views
 
 
 urlpatterns = [
+    url(r'^ajax/graph/(?P<tuneid>[tsi][0-9]{1,9})/$', views.ajax_graph_view),
     url(r'^collection/(?P<pk>[0-9]{1,9})/$', views.CollectionView.as_view()),
     url(r'^collections/$', views.CollectionsView.as_view()),
     url(r'^download/(?P<pk>[0-9]{1,9})/$', views.download),
+    url(r'^graph/(?P<tuneid>[tsi][0-9]{1,9})/$', views.graph_view),
     url(r'^instance/(?P<pk>[0-9]{1,9})/$', views.InstanceView.as_view()),
     url(r'^search/$', views.title_search, name='title_search'),
     url(r'^song/(?P<pk>[0-9]{1,9})/$', views.song_view),

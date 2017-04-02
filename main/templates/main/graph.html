@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Tune Graph Exploror{% endblock %}
+{% block headline %}Tune Graph Explorer{% endblock %}
+
+{% block content %}
+{% if error %}
+<p>The requested object was not found.</p>
+<p>Try using the <a href="/search/">search page</a>.</p>
+{% else %}
+<div id="graph"></div>
+<script src="/static/graph.js"></script>
+{% endif %}
+{% endblock %}
