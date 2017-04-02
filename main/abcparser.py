@@ -73,14 +73,14 @@ class Tune(object):
         # field ordering.
         assert(isinstance(line, str))
         n = '%06d' % len(self.canonical)
-        if field in 'XT':
-            key = '1' + field + n
+        if field in 'XT':          # pragma: no branch -- these should never happen
+            key = '1' + field + n  # pragma: no cover
         elif field in 'LMmPUV':
             key = '2' + field + n
         elif field == 'K':
             key = '3' + field + n
-        elif field != 'body':
-            key = '4' + field + n
+        elif field != 'body':      # pragma: no branch
+            key = '4' + field + n  # pragma: no cover
         else:
             key = '5_' + n
         self.canonical.append({ 'sort': key, 'line': line})
@@ -562,7 +562,7 @@ class ABCParser(metaclass=abc.ABCMeta):
                     else:
                         line = line.lstrip()
                     tune.full_tune_append('+:' + line + comment)
-                else:
+                else:  # pragma: no cover
                     assert(False)  # this should be unreachable
                 continue
 
@@ -579,7 +579,7 @@ class ABCParser(metaclass=abc.ABCMeta):
             last_field_type = None
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     import sys
 
     class CLIParser(ABCParser):

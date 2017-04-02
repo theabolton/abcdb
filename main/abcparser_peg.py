@@ -287,7 +287,7 @@ class ABCVisitor(PTNodeVisitor):
         super().__init__(*args, **kwargs)
 
     def print_debug(self, node, children):
-        print(type(node), node.rule_name, node.flat_str(), children)
+        print(type(node), node.rule_name, node.flat_str(), children)  # pragma: no cover
 
     def visit__default__(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
@@ -349,7 +349,7 @@ class ABCVisitor(PTNodeVisitor):
 
     def visit_text_expression(self, node, children):
         text = ''.join(children)
-        if self.text_string_decoder:
+        if self.text_string_decoder:  # pragma: no branch
             text = self.text_string_decoder(text)
         return text
 
@@ -363,7 +363,7 @@ def canonify_music_code(line, text_string_decoder=None):
     return visit_parse_tree(parse_tree, ABCVisitor(text_string_decoder=text_string_decoder))
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     import pprint
     import sys
     pp = pprint.PrettyPrinter(indent=2)
