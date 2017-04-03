@@ -129,7 +129,8 @@ function load_graph(error, json) {
         if (node.title) {
             attributes.label += "\n“" + node.title + "”";
         }
-        if (node.id != focus_node && node.id.charAt(0) == focus_node.charAt(0)) {
+        //if (node.id != focus_node && node.id.charAt(0) == focus_node.charAt(0)) {
+        if (node.id != focus_node) {
             attributes.class += " blur";
         }
         g.setNode(node.id, attributes);
@@ -139,8 +140,9 @@ function load_graph(error, json) {
         link = json.links[i];
         attributes = { curve: d3.curveMonotoneX, serial: graph_serial };
         if (link.source != focus_node && link.target != focus_node) {
-            attributes.weight = 4; /* pull linked nodes closer to focus node */
             attributes.class = "blur";
+        } else {
+            attributes.weight = 4; /* pull linked nodes closer to focus node */
         }
         g.setEdge(link.source, link.target, attributes);
     }

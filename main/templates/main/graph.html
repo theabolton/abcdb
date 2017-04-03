@@ -3,10 +3,13 @@
 {% block headline %}Tune Graph Explorer{% endblock %}
 {% block head %}
 <style>
-  .instance { fill: palegreen; stroke: none; }
-  .song { fill: lightpink; stroke: none; }
-  .song.blur ellipse { fill: none; stroke: black; stroke-width: 1.5px; }
-  .title { fill: lightblue; stroke: none; }
+  /* was: lightpink, lightblue, palegreen */
+  .instance { fill: #7f7; stroke: none; }
+  .instance.blur ellipse { fill: white; stroke: #7f7; stroke-width: 2px}
+  .song { fill: #f88; stroke: none; }
+  .song.blur ellipse { fill: white; stroke: #f88; stroke-width: 2px; }
+  .title { fill: #9bf; stroke: none; }
+  .title.blur ellipse { fill: white; stroke: #9bf; stroke-width: 2px; }
   .edgePath path { stroke: #222; stroke-width: 1.5px; }
   .edgePath.blur path { stroke-dasharray: 1.5, 6; }
   .label { text-anchor: middle; fill: black; font-size: 0.9em; font-family: Times, serif; }

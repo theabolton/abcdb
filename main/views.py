@@ -70,71 +70,84 @@ def remove_diacritics(s):
 
 # ========== User-oriented Model Views ==========
 
-def ajax_graph_view(request, tuneid=None):
+def ajax_graph_view(request, tune_id=None):
     """View for client-side tune graph explorer which returns JSON describing the graph of titles,
     songs, and instances for the requested object."""
 
     if not request.is_ajax():
-        return HttpResponseRedirect('/graph/{}/'.format(tuneid))
+        return HttpResponseRedirect('/graph/{}/'.format(tune_id))
 
-    node_type = tuneid[:1]
-    pk = tuneid[1:]
+    node_type = tune_id[:1]
+    pk = tune_id[1:]
+    graph = { "nodes": [], "links": [] }
+
+    # Recursively add songs, titles, and instances to the graph, recording the nodes we've seen
+    # in the set `seen`. This hits the database pretty hard on large graphs, but I think it's the
+    # best that can be done with Django's ORM.
+    seen = set()
+    add_title    = None # forward function
+    add_instance = None # forward function
+
+    def add_edge(sid, tid):
+        e = '|'.join((sid, tid))
+        if e not in seen:
+            seen.add(e)
+            graph['links'].append({ 'source': sid, 'target': tid })
+
+    def add_song(song, sid):
+        if sid in seen:
+            return
+        seen.add(sid)
+        graph['nodes'].append({ 'id': sid })
+        instances = (Instance.objects.filter(song=song.id)
+                         .select_related('song')
+                         .defer('text', 'digest'))
+        for i in instances:
+            iid = 'i' + str(i.id)
+            add_instance(i, iid)
+            add_edge(sid, iid)
+        titles = Title.objects.filter(songs=song.id).defer('flat_title')
+        for t in titles:
+            tid = 't' + str(t.id)
+            add_title(t, tid)
+            add_edge(tid, sid)
+
+    def add_title(title, tid):
+        if tid in seen:
+            return
+        seen.add(tid)
+        graph['nodes'].append({ 'id': tid, 'title': _ellipsize(title.title, 30) })
+        songs = Song.objects.filter(title=title.id).defer('digest')
+        for s in songs:
+            sid = 's' + str(s.id)
+            add_song(s, sid)
+            add_edge(tid, sid)
+
+    def add_instance(instance, iid):
+        if iid in seen:
+            return
+        seen.add(iid)
+        graph['nodes'].append({ 'id': iid,
+                                'title': _ellipsize(instance.first_title.title, 30) })
+        sid = 's' + str(instance.song.id)
+        add_song(instance.song, sid)
+        add_edge(sid, iid)
+        # first_titles will get added by songs
+
     try:
         if node_type == 's':
             song = Song.objects.get(pk=pk)
-        elif node_type in ('t', 'i', 'c'):
-            return JsonResponse({ 'error': True, 'description': 'Unsupported node type.' }) # !FIX!
+            add_song(song, tune_id)
+        elif node_type == 't':
+            title = Title.objects.get(pk=pk)
+            add_title(title, tune_id)
+        elif node_type == 'i':
+            instance = Instance.objects.select_related('song').get(pk=pk)
+            add_instance(instance, tune_id)
         else:
             raise ObjectDoesNotExist
     except ObjectDoesNotExist:
         return JsonResponse({ 'error': True, 'description': 'The requested object was not found.' })
-
-    graph = { "nodes": [], "links": [] }
-
-    # initialize graph with a node for this song
-    graph['nodes'].append({ 'id': 's' + pk })
-
-    # instances
-    instances = (Instance.objects.filter(song=pk)
-                    .select_related('first_title')
-                    .defer('text', 'digest'))
-    for i in instances:
-        isym = 'I' + str(i.pk)
-        graph['nodes'].append({
-                'id': 'i' + str(i.pk),
-                'title': _ellipsize(i.first_title.title, 30)
-            })
-        graph['links'].append({
-                'source': 's' + str(pk),
-                'target': 'i' + str(i.pk)
-            })
-
-    # titles: Titles given to any instance of this song
-    # -FIX- listing of other songs could be reduced to a single extra query
-    titles = Title.objects.filter(songs=pk).order_by('title')
-    songs_seen = set()
-    for t in titles:
-        tsym = 'T' + str(t.pk)
-        graph['nodes'].append({
-                'id': 't' + str(t.pk),
-                'title': _ellipsize(t.title, 30)
-            })
-        graph['links'].append({
-                'source': 't' + str(t.pk),
-                'target': 's' + str(pk)
-            })
-        songs = Song.objects.filter(title=t.pk).order_by('id')
-        for s in songs:
-            if s.pk == int(pk):
-                continue
-            ssym = 'S' + str(s.pk)
-            if s.pk not in songs_seen:
-                songs_seen.add(s.pk)
-                graph['nodes'].append({ 'id': 's' + str(s.pk) })
-            graph['links'].append({
-                    'source': 't' + str(t.pk),
-                    'target': 's' + str(s.pk)
-                })
 
     return JsonResponse(graph)
 
@@ -172,13 +185,13 @@ class CollectionsView(generic.ListView):
         return Collection.objects.all().order_by('-date')
 
 
-def graph_view(request, tuneid=None):
+def graph_view(request, tune_id=None):
     """View for the client-side tune graph explorer. Return the HTML need to set up the page; n.b.
     ajax_graph_view() above which serves the graph JSON."""
 
     # check that focus node exists
-    node_type = tuneid[:1]
-    pk = tuneid[1:]
+    node_type = tune_id[:1]
+    pk = tune_id[1:]
     try:
         if node_type == 's':
             Song.objects.get(pk=pk)
