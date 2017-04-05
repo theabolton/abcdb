@@ -218,6 +218,7 @@ ABCdb presents a somewhat simple exterior, yet there is much going on "under
 the hood". The pieces of ABCdb that I have written are:
 
   * The ABCdb Django application, including all models, views, forms, and templates
+  * Client-side JavaScript for generating graphs and charts using D3
   * An ABC parser (described in detail below)
   * A parse-tree visitor which reconstitutes parsed ABC in canonical form, for
     de-duplication purposes
@@ -233,8 +234,11 @@ Off-the-shelf software that ABCdb uses:
   * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_ (PEG parser)
   * `Graphviz 0.5.2 <https://github.com/xflr6/graphviz>`_ (Python driver for
     `Graphviz <http://www.graphviz.org/>`_ graph visualization software)
-  * `Zurb Foundation 6.3.0 <http://foundation.zurb.com/>`_ (front-end framework)
+  * `Zurb Foundation 5.4.6 <http://foundation.zurb.com/>`_ (front-end framework)
   * `abcjs 3.0 <https://github.com/paulrosen/abcjs>`_ (in-browser ABC renderer)
+  * `D3 4.x <https://d3js.org/>`_ (client-side graphs and charts)
+  * `dagre <https://github.com/cpettitt/dagre>`_ and `dagre-d3v4
+    <https://github.com/smbolton/dagre-d3v4>`_ (cliend-side tune graph layout)
 
 ABCdb has been tested with both `SQLite 3.13.0 <https://www.sqlite.org/>`_ and
 `PostgreSQL 9.6.0 <https://www.postgresql.org/>`_ databases.
@@ -396,6 +400,9 @@ Other software used in or by ABCdb is licensed under the following licenses:
   * Graphviz python module: MIT/Expat license
   * Zurb Foundation: MIT/Expat license
   * abcjs: MIT/Expat license
+  * D3: 3-clause BSD license
+  * dagre: MIT/Expat license
+  * dagre-d3v4: MIT/Expat license
 
 See the file
 `LICENSES <https://github.com/smbolton/abcdb/blob/master/LICENSES>`_ for more

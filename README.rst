@@ -36,6 +36,8 @@ packages:
   * `pytz 2016.10 <https://pythonhosted.org/pytz/>`_
   * `requests 2.12.5 <https://github.com/kennethreitz/requests>`_
   * `Arpeggio 1.5 <https://github.com/igordejanovic/Arpeggio>`_
+  * `graphviz 0.5.2 <https://github.com/xflr6/graphviz>`_, as well as the
+    `graphviz <http://www.graphviz.org/>`_ binaries.
 
 Additionally, two environment variables must be set:
 
