@@ -84,8 +84,13 @@ function display_error(message) {
 function load_graph(error, json) {
     /* handle XHR error, if any */
     if (error) {
-        display_error("Tune graph loading failed with '" + error.target.status +
-                      " " + error.target.statusText + "'.");
+        if (error.target.status === 0) {
+            display_error("An error occurred while trying to request the tune graph ('" +
+                          error.target.status + " " + error.target.statusText + "').");
+        } else {
+            display_error("Tune graph loading failed with '" + error.target.status +
+                          " " + error.target.statusText + "'.");
+        }
         return;
     }
     /* handle back-end error, if any */
