@@ -1,7 +1,43 @@
 {% extends 'base.html' %}
 {% block title %}Stats{% endblock %}
 {% block headline %}Database Statistics{% endblock %}
-
+{% block head %}
+<style>
+.chart rect {
+  fill: steelblue;
+}
+.chart text {
+  fill: white;
+  font: 11px sans-serif;
+  text-anchor: end;
+}
+.axis text {
+  fill: black;
+  font: 12px sans-serif;
+  text-anchor: middle;
+}
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+.axis.y path {
+  stroke: none;
+}
+</style>
+<script>
+/* data for histograms */
+var inst_per_song = [
+{% for c, n in inst_per_song_histo %}{ count: {{ c }}, frequency: {{ n }}}{% if not forloop.last %},{% endif %}{% endfor %}
+];
+var coll_per_inst = [
+{% for c, n in coll_per_inst_histo %}{ count: {{ c }}, frequency: {{ n }}}{% if not forloop.last %},{% endif %}{% endfor %}
+];
+</script>
+<script src="https://d3js.org/d3.v4.min.js" defer></script>
+<script src="/static/stats_bar_chart.js" defer></script>
+{% endblock %}
 {% block content %}
 <p>The database currently contains:</p>
 <ul style="list-style: none;">
@@ -17,27 +53,14 @@ least one new instance, is {{ collection_instances }}.</p>
 
 <p>Collection instances vs. database instances deduplication amount: {{ coll_to_inst_dedup }}%</p>
 
-<p>In the following table, the instances of each song are counted, then those
+<p>In the following chart, the instances of each song are counted, then those
 counts are tabulated to show the frequency of occurrence of each count.
 Counts greater than 1 reflect successful identification of "musically
 identical" instances of the same song.</p>
-<!-- for testing: inst_per_song_histo {% for c, n in inst_per_song_histo %}{{ c }}:{{ n }}|{% endfor %} -->
-<table>
-<tr><th>Instances-per-Song Count</th><th>Frequency</th></tr>
-{% for c, n in inst_per_song_histo %}
-  <tr><td>{{ c }}</td><td>{{ n }}</td>
-{% endfor %}
-</table>
-
-<p>Similarly, the following table shows the frequency of occurrence of
+<div id="inst_per_song"></div>
+<p>Similarly, the following chart shows the frequency of occurrence of
 collections per instance. Counts greater than 1 reflect instances which
 were found in more than one collection, representing successful deduplication
 at the instance level.</p>
-<!-- for testing: coll_per_inst_histo {% for c, n in coll_per_inst_histo %}{{ c }}:{{ n }}|{% endfor %} -->
-<table>
-<tr><th>Collections-per-Instance Count</th><th>Frequency</th></tr>
-{% for c, n in coll_per_inst_histo %}
-  <tr><td>{{ c }}</td><td>{{ n }}</td>
-{% endfor %}
-</table>
+<div id="coll_per_inst"></div>
 {% endblock %}

@@ -380,10 +380,11 @@ class statsTests(TestCase):
         self.assertContains(response, 'Instances vs. songs deduplication amount: 50.00%')
         self.assertContains(response, 'least one new instance, is 2.')
         self.assertContains(response, 'vs. database instances deduplication amount: 0.00%')
-        # instances-per-song histo (in a comment created for this test)
-        self.assertContains(response, 'inst_per_song_histo 2:1| ')
-        # collections-per-instance histo
-        self.assertContains(response, 'coll_per_inst_histo 2:1|1:1| ')
+        # data for instances-per-song histogram
+        self.assertRegex(response.content, rb'var inst_per_song = \[\s*{ count: 2, frequency: 1}\s*\]')
+        # data for collections-per-instance histogram
+        self.assertRegex(response.content, rb'var coll_per_inst = \[\s*{ count: 2, frequency: 1}\s*,'
+                                           rb'\s*{ count: 1, frequency: 1}\s*\]')
 
 
 class downloadTests(TestCase):
