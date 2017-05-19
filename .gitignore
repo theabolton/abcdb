@@ -5,6 +5,8 @@ db.sqlite3
 main/migrations/
 abcdb/__pycache__/
 main/__pycache__/
+Cargo.lock
+target/
 
 # symlink to file in root directory
 docs/README.rst
