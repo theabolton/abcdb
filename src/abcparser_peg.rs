@@ -1,33 +1,6 @@
 #![recursion_limit="256"]
 #![allow(non_snake_case)]  // otherwise the compiler complains about the 'WSP' rule.
 
-// try: pom (nice syntax), pest (fast?), oak (nice syntax), rust-peg
-//   combine
-//     https://docs.rs/combine/2.3.2/combine/
-//     --> function-based syntax, doesn't build AST, but has tuple-based mechanism for working with values
-//   https://github.com/J-F-Liu/pom
-//     --> doesn't build an AST, but expressions return structured values
-//     https://www.codeproject.com/Articles/1165963/PEG-Parser-Combinators-Implemented-in-Rust
-//   https://github.com/pest-parser/pest
-//     -- making nice progress on the parser, wish it had regexs (just char sets, really)
-//     --> doesn't build an AST, so processing the result is funky
-//     --> but I can build my own walker that won't be too complicated!
-//   http://hyc.io/rust-lib/oak/learn-oak.html
-//     --> does build AST! requires nightly!
-//   https://github.com/kevinmehall/rust-peg
-//     --> doesn't build an AST, so every (non-trivial) rule would need a code block
-
-// nom
-// peruse
-// combine
-// chomp
-// parsell
-// pom
-// pest
-// oak
-// rusty-peg
-// rust-peg
-
 #[macro_use]
 extern crate pest;
 
@@ -325,59 +298,30 @@ impl RString {
         match (self, other) {
             (RString::Slice(mut lslice), RString::Slice(rslice)) => {
                 if lslice.end == rslice.start {
-unsafe {
-                    println!("{} add: concatenating contiguous slices {}-{}, {}-{}", depth, lslice.start, lslice.end, rslice.start, rslice.end); // !
-}
                     lslice.end = rslice.end;
                     RString::Slice(lslice)
                 } else {
-                    println!("add: noncontiguous slices; building string"); // !
                     let mut s = String::from_iter(input[lslice.start..lslice.end].chars());
                     s.push_str(&input[rslice.start..rslice.end]);
                     RString::Str(s)
                 }
             }
             (RString::Slice(lslice), RString::Str(rstring)) => {
-                println!("add: creating string from slice, then adding string"); // !
                 let mut s = String::from_iter(input[lslice.start..lslice.end].chars());
                 s.push_str(&rstring);
                 RString::Str(s)
             }
             (RString::Str(mut lstring), RString::Slice(rslice)) => {
-                println!("add: adding slice to string"); // !
                 lstring.push_str(&input[rslice.start..rslice.end]);
                 RString::Str(lstring)
             }
             (RString::Str(mut lstring), RString::Str(rstring)) => {
-                println!("add: adding string to string"); // !
                 lstring.push_str(&rstring);
                 RString::Str(lstring)
             }
         }
     }
 }
-
-// fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
-//     let mut child_i = i + 1;
-//     if child_i < qlen && q[child_i].start < q[i].end {
-//         // there are children to recurse into
-//         let (mut rstr, new_i) = recurse_children(child_i, q, qlen, input);
-//         child_i = new_i;
-//         while child_i < qlen && q[child_i].start < q[i].end {
-//             let (rstr2, new_i) = recurse_children(child_i, q, qlen, input);
-//             child_i = new_i;
-//             rstr = rstr.add(rstr2, input);
-//         }
-//         (rstr, child_i)
-//     } else {
-//         // no children, so return the text of this match
-//         println!("new: creating new slice"); // !
-//         (RString::Slice(RSlice { start: q[i].start, end: q[i].end }), i + 1)
-//     }
-// }
-
-#[allow(non_upper_case_globals)]
-static mut depth: i32 = 0;
 
 fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
     let mut child_i = i + 1;
@@ -388,9 +332,6 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
         if text_offset < q[child_i].start {
             // gather plain text before first child
             rstr = RString::from_slice(text_offset, q[child_i].start);
-unsafe {
-        println!("{} new: plain text before, creating new slice {}-{}", depth, text_offset, q[child_i].start); // !
-}
             // gather first child
             let (rstr2, new_i) = recurse_children(child_i, q, qlen, input);
             rstr = rstr.add(rstr2, input);
@@ -421,23 +362,17 @@ unsafe {
         (rstr, child_i)
     } else {
         // no children, just return the text of this match
-unsafe {
-        println!("{} new: no children, creating new slice {}-{}", depth, q[i].start, q[i].end); // !
-}
         (RString::from_slice(q[i].start, q[i].end), i + 1)
     }
 }
 
 fn recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
-unsafe { depth += 1;
-    println!("{} child! {} {:?}", depth, i, q[i].rule); }
     match q[i].rule {
         // !FIX! canonicize all the "non-standard, from Norbeck" things
         Rule::abc_eol => {
             let (rstr, new_i) = _gather_children(i, q, qlen, input);
             // trim trailing whitespace
             let s = rstr.to_string(input).trim().to_string();
-unsafe { depth -= 1; }
             (RString::Str(s), new_i)
         }
         Rule::chord_newline => {
@@ -446,7 +381,6 @@ unsafe { depth -= 1; }
         }
         Rule::WSP => {
             // squash any whitespace to a single space
-unsafe { depth -= 1; }
             if &input[q[i].start..q[i].end] == " " {
                 (RString::from_slice(q[i].start, q[i].end), i + 1)
             } else {
@@ -456,7 +390,6 @@ unsafe { depth -= 1; }
         _ => {  // default rule, recursively gather children, if any
             // _gather_children(i, q, qlen, input)
             let x = _gather_children(i, q, qlen, input);
-unsafe { depth -= 1; }
             x
         }
     }
@@ -465,7 +398,6 @@ unsafe { depth -= 1; }
 fn process(parser: &Rdp<pest::StringInput>) -> String {
     let q = parser.queue();
     let qlen = q.len();
-    println!("length of queue: {}", qlen);
     let ilen = parser.input().len();
     let input = parser.input().slice(0, ilen);
     let mut result = String::new();
@@ -490,8 +422,9 @@ fn main() {
     } else {
         println!("expected: {:?}", parser.expected());
     }
+}
 
-//println!("3333 other {}", parser.input().slice(q[i].start, q[i].end));
+// tests for RString
     //~ let a = RString::from_slice(0, 1);
     //~ let b = RString::from_slice(1, 3);
     //~ println!("{:?} {:?}", a, b);
@@ -509,4 +442,3 @@ fn main() {
     //~ let j = RString::from_slice(1, 2);
     //~ let k = i.add(j, parser.input().slice(0,7));
     //~ println!("{:?}", k);
-}
