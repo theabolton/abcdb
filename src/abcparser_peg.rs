@@ -333,13 +333,13 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
             // gather plain text before first child
             rstr = RString::from_slice(text_offset, q[child_i].start);
             // gather first child
-            let (rstr2, new_i) = recurse_children(child_i, q, qlen, input);
+            let (rstr2, new_i) = _recurse_children(child_i, q, qlen, input);
             rstr = rstr.add(rstr2, input);
             text_offset = q[child_i].end;
             child_i = new_i;
         } else {
             // gather first child
-            let (rstr2, new_i) = recurse_children(child_i, q, qlen, input);
+            let (rstr2, new_i) = _recurse_children(child_i, q, qlen, input);
             rstr = rstr2;
             text_offset = q[child_i].end;
             child_i = new_i;
@@ -350,7 +350,7 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
                 rstr = rstr.add(RString::from_slice(text_offset, q[child_i].start), input);
             }
             // gather child
-            let (rstr2, new_i) = recurse_children(child_i, q, qlen, input);
+            let (rstr2, new_i) = _recurse_children(child_i, q, qlen, input);
             rstr = rstr.add(rstr2, input);
             text_offset = q[child_i].end;
             child_i = new_i;
@@ -366,7 +366,7 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
     }
 }
 
-fn recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
+fn _recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
     match q[i].rule {
         // !FIX! canonicize all the "non-standard, from Norbeck" things
         Rule::abc_eol => {
@@ -395,7 +395,7 @@ fn recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
     }
 }
 
-fn process(parser: &Rdp<pest::StringInput>) -> String {
+fn visit_parse_tree(parser: &Rdp<pest::StringInput>) -> String {
     let q = parser.queue();
     let qlen = q.len();
     let ilen = parser.input().len();
@@ -403,24 +403,85 @@ fn process(parser: &Rdp<pest::StringInput>) -> String {
     let mut result = String::new();
     let mut i = 0;
     while i < qlen {
-        let (rstring, new_i) = recurse_children(i, q, qlen, input);
+        let (rstring, new_i) = _recurse_children(i, q, qlen, input);
         i = new_i;
         result.push_str(&rstring.to_string(input));
     }
     result
 }
 
-fn main() {
-    let arg = std::env::args().nth(1).unwrap();
-
-    let mut parser = Rdp::new(StringInput::new(&arg));
-    println!("top rule matched: {:?}", parser.music_code_line());
-    println!("parsed to end: {:?}", parser.end());
-    if parser.end() {
-        println!("queue: {:?}", parser.queue());
-        println!("process: '{}'", process(&parser));
+fn parse_get_error_message(parser: &mut Rdp<pest::StringInput>) -> String {
+    let expected = parser.expected();
+    let mut message = format!("ABC parse failed at character {}, ", expected.1);
+    if expected.1 > 10 {
+        message.push_str(&format!("matched '...{}', ", parser.input().slice(expected.1 - 10, expected.1)));
     } else {
-        println!("expected: {:?}", parser.expected());
+        message.push_str(&format!("matched '{}', ", parser.input().slice(0, expected.1)));
+    }
+    if expected.1 + 10 < parser.input().len() {
+        message.push_str(&format!("could not match '{}...', ", parser.input().slice(expected.1, expected.1 + 10)));
+    } else {
+        message.push_str(&format!("could not match '{}', ", parser.input().slice(expected.1, expected.1 + 10)));
+    };
+    message.push_str(&format!("expected {:?}" , expected.0));
+    message
+}
+
+use std::panic::catch_unwind;
+use std::ffi::{CStr,CString};
+use std::os::raw::c_char;
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct ParseResult {
+   status: i32,  // 0: successfull parse, 1: parse error, 2: panic caught
+   text: *mut c_char  // parsed, canonicized text, or error message
+}
+
+#[no_mangle]
+pub extern fn canonify_music_code(raw_input: *const c_char) -> *mut ParseResult {
+    let result: Result<ParseResult, _> = catch_unwind(|| {
+        assert!(!raw_input.is_null());
+        let c_str = unsafe { CStr::from_ptr(raw_input) };
+        let input = c_str.to_str().unwrap();  // Python should have sent valid UTF-8, panic if not
+        let mut parser = Rdp::new(StringInput::new(input));
+        let (status, text) = if parser.music_code_line() {  // if parse succeeded
+            (0, visit_parse_tree(&parser))                  // get canonical result
+        } else {                                            // else
+            (1, parse_get_error_message(&mut parser))       // get error message
+        };
+        ParseResult { status: status, text: CString::new(text).unwrap().into_raw() }
+    });
+    let pr: ParseResult;
+    match result {
+        Ok(r) => { pr = r; }
+        Err(e) => {  // the closure panicked, so try to get an error message
+            let s: &str;
+            // why does catch_unwind() throw away the location information?
+            //   -> libstd/panicking.rs:try()
+            //   -> src/libpanic_unwind/lib.rs:__rust_maybe_catch_panic() discards the location
+            //      (file and line) information (if it was ever valid), so the cause is the most
+            //      we can retreive:
+            if let Some(rs) = e.downcast_ref::<&'static str>() {
+                s = *rs;
+            } else if let Some(rs) = e.downcast_ref::<String>() {
+                s = &rs[..];
+            } else {
+                s = "Panic!";
+            }
+            pr = ParseResult { status: 2, text: CString::new(s).unwrap().into_raw() };
+        }
+    }
+    Box::into_raw(Box::new(pr))
+}
+
+#[no_mangle]
+pub extern fn free_result(p: *mut ParseResult) {
+    if !p.is_null() {
+        unsafe {
+            let b = Box::from_raw(p);
+            CString::from_raw(b.text);
+        }
     }
 }
 
