@@ -10,5 +10,9 @@ before_install:
   - sudo apt-get install graphviz -y
 install:
   - pip install -q -r requirements.txt
+  - curl https://sh.rustup.rs -sSf | sh -s -- -y
+  - export PATH="$PATH:~/.cargo/bin"
+  - rustup toolchain install stable
+  - cargo build
 script:
   - python manage.py makemigrations && python manage.py test main --exclude-tag fetch
