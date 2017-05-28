@@ -421,7 +421,7 @@ fn parse_get_error_message(parser: &mut Rdp<pest::StringInput>) -> String {
     if expected.1 + 10 < parser.input().len() {
         message.push_str(&format!("could not match '{}...', ", parser.input().slice(expected.1, expected.1 + 10)));
     } else {
-        message.push_str(&format!("could not match '{}', ", parser.input().slice(expected.1, expected.1 + 10)));
+        message.push_str(&format!("could not match '{}', ", parser.input().slice(expected.1, parser.input().len())));
     };
     message.push_str(&format!("expected {:?}" , expected.0));
     message
