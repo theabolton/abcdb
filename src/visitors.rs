@@ -97,9 +97,28 @@ impl RString {
 // ======== Parse Tree Visitors =======
 
 // A parse tree visitor returns a String built from the parsed text, with any necessary changes
-// applied.
+// applied. A visitor is made from two mutually-recursive functions, gather_children() and a
+// RulerFn, driven by the top visitor function, visit_parse_tree(). The RulerFn is responsible
+// for matching on the parser rules, and taking correspondingly appropriate actions.
 
-fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
+// The immutable context passed between the RulerFn and gather_children()
+struct Context<'a> {
+    index: usize,             // index of the current node in q
+    q: &'a Vec<Token<Rule>>,  // the parser result queue
+    input: &'a str,           // the original input text
+    ruler: &'a RulerFn,       // the RulerFn for this visitor
+}
+
+// For the node Context.q[Context.index], a RulerFn returns a tuple, consisting of an RString of
+// the processed text for that node and any of its children, and one more than the last child it
+// processed (which is the index of the next node to be processed if more nodes exist.)
+type RulerFn = Fn(&Context) -> (RString, usize);
+
+fn gather_children(context: &Context) -> (RString, usize) {
+    let i = context.index;
+    let q = context.q;
+    let qlen = q.len();
+    let input = context.input;
     let mut child_i = i + 1;
     if child_i < qlen && q[child_i].start < q[i].end {
         // there are children to recurse into
@@ -109,13 +128,13 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
             // gather plain text before first child
             rstr = RString::from_slice(text_offset, q[child_i].start);
             // gather first child
-            let (rstr2, new_i) = _recurse_children(child_i, q, qlen, input);
+            let (rstr2, new_i) = (context.ruler)(&Context { index: child_i, .. *context });
             rstr = rstr.add(rstr2, input);
             text_offset = q[child_i].end;
             child_i = new_i;
         } else {
             // gather first child
-            let (rstr2, new_i) = _recurse_children(child_i, q, qlen, input);
+            let (rstr2, new_i) = (context.ruler)(&Context { index: child_i, .. *context });
             rstr = rstr2;
             text_offset = q[child_i].end;
             child_i = new_i;
@@ -126,7 +145,7 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
                 rstr = rstr.add(RString::from_slice(text_offset, q[child_i].start), input);
             }
             // gather child
-            let (rstr2, new_i) = _recurse_children(child_i, q, qlen, input);
+            let (rstr2, new_i) = (context.ruler)(&Context { index: child_i, .. *context });
             rstr = rstr.add(rstr2, input);
             text_offset = q[child_i].end;
             child_i = new_i;
@@ -142,7 +161,7 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
     }
 }
 
-fn visit_parse_tree(parser: &Rdp<pest::StringInput>) -> String {
+fn visit_parse_tree(parser: &Rdp<pest::StringInput>, ruler: &RulerFn) -> String {
     let q = parser.queue();
     let qlen = q.len();
     let ilen = parser.input().len();
@@ -150,18 +169,23 @@ fn visit_parse_tree(parser: &Rdp<pest::StringInput>) -> String {
     let mut result = String::new();
     let mut i = 0;
     while i < qlen {
-        let (rstring, new_i) = _recurse_children(i, q, qlen, input);
+        let (rstring, new_i) = ruler(&Context { index: i, q, input, ruler });
         i = new_i;
         result.push_str(&rstring.to_string(input));
     }
     result
 }
 
-fn _recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
+// ======== ABC Canonification ========
+
+fn ruler_canonify_abc(context: &Context) -> (RString, usize) {
+    let i = context.index;
+    let q = context.q;
+    let input = context.input;
     match q[i].rule {
         // !FIX! canonicize all the "non-standard, from Norbeck" things
         Rule::abc_eol => {
-            let (rstr, new_i) = _gather_children(i, q, qlen, input);
+            let (rstr, new_i) = gather_children(context);
             // trim trailing whitespace
             let s = rstr.to_string(input).trim().to_string();
             (RString::Str(s), new_i)
@@ -173,20 +197,19 @@ fn _recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -
         Rule::WSP => {
             // squash any whitespace to a single space
             if &input[q[i].start..q[i].end] == " " {
+                // it is just a single space already
                 (RString::from_slice(q[i].start, q[i].end), i + 1)
             } else {
                 (RString::Str(' '.to_string()), i + 1)
             }
         }
         _ => {  // default rule, recursively gather children, if any
-            // _gather_children(i, q, qlen, input)
-            let x = _gather_children(i, q, qlen, input);
-            x
+            gather_children(context)
         }
     }
 }
 
 pub fn canonify_abc_visitor(parser: &Rdp<pest::StringInput>) -> String {
-    visit_parse_tree(parser)
+    visit_parse_tree(parser, &ruler_canonify_abc)
 }
 
