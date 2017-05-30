@@ -22,20 +22,20 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #![recursion_limit="256"]
-#![allow(non_snake_case)]  // otherwise the compiler complains about the 'WSP' rule.
-
 #[macro_use]
 extern crate pest;
 
 mod grammar;
 mod visitors;
 
+use std::panic::catch_unwind;
+use std::ffi::{CStr,CString};
+use std::os::raw::c_char;
+
 use pest::prelude::*;
 
-// xx use std::iter::FromIterator;
-
 use grammar::Rdp;
-use visitors::visit_parse_tree;
+use visitors::canonify_abc_visitor;
 
 fn parse_get_error_message(parser: &mut Rdp<pest::StringInput>) -> String {
     let expected = parser.expected();
@@ -54,10 +54,6 @@ fn parse_get_error_message(parser: &mut Rdp<pest::StringInput>) -> String {
     message
 }
 
-use std::panic::catch_unwind;
-use std::ffi::{CStr,CString};
-use std::os::raw::c_char;
-
 #[derive(Debug)]
 #[repr(C)]
 pub struct ParseResult {
@@ -73,7 +69,7 @@ pub extern fn canonify_music_code(raw_input: *const c_char) -> *mut ParseResult 
         let input = c_str.to_str().unwrap();  // Python should have sent valid UTF-8, panic if not
         let mut parser = Rdp::new(StringInput::new(input));
         let (status, text) = if parser.music_code_line() {  // if parse succeeded
-            (0, visit_parse_tree(&parser))                  // get canonical result
+            (0, canonify_abc_visitor(&parser))              // get canonical result
         } else {                                            // else
             (1, parse_get_error_message(&mut parser))       // get error message
         };
@@ -111,22 +107,3 @@ pub extern fn free_result(p: *mut ParseResult) {
         }
     }
 }
-
-// tests for RString
-    //~ let a = RString::from_slice(0, 1);
-    //~ let b = RString::from_slice(1, 3);
-    //~ println!("{:?} {:?}", a, b);
-    //~ let c = a.add(b, parser.input().slice(0,7));
-    //~ println!("{:?}", c);
-    //~ let d = RString::from_str("hello!");
-    //~ let e = c.add(d, parser.input().slice(0,7));
-    //~ println!("{:?}", e);
-    //~ let f = RString::from_str("goodbye!");
-    //~ let g = e.add(f, parser.input().slice(0,7));
-    //~ println!("{:?}", g);
-    //~ let h = RString::from_slice(1, 2);
-    //~ let i = h.add(g, parser.input().slice(0,7));
-    //~ println!("{:?}", i);
-    //~ let j = RString::from_slice(1, 2);
-    //~ let k = i.add(j, parser.input().slice(0,7));
-    //~ println!("{:?}", k);

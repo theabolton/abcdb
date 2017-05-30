@@ -118,7 +118,7 @@ impl_rdp! {
     // string. We need the note_length parser to fail if it doesn't match anything. Things we
     // need to match include: '2', '/2', '3/2', '/', '//'.
     note_length = { note_length_smaller | note_length_full | note_length_bigger | note_length_slashes }
-    note_length_bigger = { DIGITS }  // !FIX! had '+' on the end  # DIGITS is already greedy, but this avoids an optimization (bug?)
+    note_length_bigger = { DIGITS }
     note_length_smaller = { ["/"] ~ DIGITS }
     note_length_full = { DIGITS ~ ["/"] ~ DIGITS }
     note_length_slashes = { ["/"]+ }

@@ -29,6 +29,13 @@ use pest::prelude::*;
 
 use grammar::{Rdp,Rule};
 
+// ======== RSlice and RString ========
+
+// RSlice and RString form an efficient way to build up the canonified ABC while walking the
+// parse tree. Since this most often involves simply concatenating adjacent slices of the input,
+// the RString 'Slice' variant is used to accumulate the pieces without allocating a String. Only
+// when a parse rule result needs to be changed will a String need to be allocated.
+
 #[derive(Debug)]
 struct RSlice {
     start: usize,
@@ -87,6 +94,11 @@ impl RString {
     }
 }
 
+// ======== Parse Tree Visitors =======
+
+// A parse tree visitor returns a String built from the parsed text, with any necessary changes
+// applied.
+
 fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -> (RString, usize) {
     let mut child_i = i + 1;
     if child_i < qlen && q[child_i].start < q[i].end {
@@ -130,7 +142,7 @@ fn _gather_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) ->
     }
 }
 
-pub fn visit_parse_tree(parser: &Rdp<pest::StringInput>) -> String {
+fn visit_parse_tree(parser: &Rdp<pest::StringInput>) -> String {
     let q = parser.queue();
     let qlen = q.len();
     let ilen = parser.input().len();
@@ -172,5 +184,9 @@ fn _recurse_children(i: usize, q: &Vec<Token<Rule>>, qlen: usize, input: &str) -
             x
         }
     }
+}
+
+pub fn canonify_abc_visitor(parser: &Rdp<pest::StringInput>) -> String {
+    visit_parse_tree(parser)
 }
 
