@@ -58,6 +58,10 @@ impl RString {
         RString::Str(s.to_string())
     }
 
+    fn from_token(tok: &Token<Rule>) -> RString {
+        RString::Slice(RSlice { start: tok.start, end: tok.end })
+    }
+
     fn to_string(self, input: &str) -> String {
         match self {
             RString::Slice(slice) => { String::from_iter(input[slice.start..slice.end].chars()) }
@@ -190,9 +194,69 @@ fn ruler_canonify_abc(context: &Context) -> (RString, usize) {
             let s = rstr.to_string(input).trim().to_string();
             (RString::Str(s), new_i)
         }
+        Rule::bad_text_expression => {
+            let (rstr, new_i) = gather_children(context);
+            // prepend a non-specific placement symbol
+            let mut s = RString::from_str("@");
+            s = s.add(rstr, input);
+            (s, new_i)
+        }
         Rule::chord_newline => {
             // canonicize to ';'
             (RString::Str(';'.to_string()), i + 1)
+        }
+        Rule::invisible_barline => {
+            if &input[q[i].start..q[i].end] == "[]" {
+                // convert non-standard invisible barline to standard
+                (RString::from_str("[|]"), i + 1)
+            } else {
+                (RString::from_token(&q[i]), i + 1)
+            }
+        }
+        Rule::note_length_bigger => {
+            let mult = &input[q[i + 1].start..q[i + 1].end];
+            match mult {
+                // convert e.g. 'a1' to 'a' by returning empty RString
+                "1" => (RString::from_slice(q[i + 1].end, q[i + 1].end), i + 2),
+                _ => (RString::from_token(&q[i]), i + 2)
+            }
+        }
+        Rule::note_length_full => {
+            let num: u32 = input[q[i + 1].start..q[i + 1].end].parse().unwrap();
+            let den: u32 = input[q[i + 2].start..q[i + 2].end].parse().unwrap();
+            match (num, den) {
+                // convert 'a1/1' to 'a' by returning an empty RString
+                (1, 1) => (RString::from_slice(q[i + 2].end, q[i + 2].end), i + 3),
+                // convert e.g. 'a2/1' to 'a2'
+                (_, 1) => (RString::from_token(&q[i + 1]), i + 3),
+                // convert 'a1/2' to 'a/'
+                (1, 2) => (RString::from_str("/"), i + 3),
+                // convert 'a1/4' to 'a//'
+                (1, 4) => (RString::from_str("//"), i + 3),
+                // convert e.g. 'a1/3' to 'a/3'
+                (1, _) => (RString::from_slice(q[i + 2].start - 1, q[i + 2].end), i + 3),
+                // default: return as-is
+                _ => (RString::from_token(&q[i]), i + 3),
+            }
+        }
+        Rule::note_length_slashes => {
+            let slashes = &input[q[i].start..q[i].end];
+            match slashes {
+                "/" | "//" => (RString::from_token(&q[i]), i + 1),
+                _ => {
+                    // convert e.g. 'a///' to 'a/8'
+                    let n = 1 << (q[i].end - q[i].start);
+                    (RString::Str(format!("/{}", n)), i + 1)
+                }
+            }
+        }
+        Rule::note_length_smaller => {
+            let denom = &input[q[i + 1].start..q[i + 1].end];
+            match denom {
+                "2" => (RString::from_str("/"), i + 2),  // convert '/2' to '/'
+                "4" => (RString::from_str("//"), i + 2), // convert '/4' to '//'
+                _ => (RString::from_token(&q[i]), i + 2),
+            }
         }
         Rule::WSP => {
             // squash any whitespace to a single space

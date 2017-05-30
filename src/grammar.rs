@@ -236,7 +236,7 @@ impl_rdp! {
               (!chord_newline ~ non_quote)*
             }
 
-    // the last three here are \\u266f sharp symbol, \\u266d flat symbol, and \\u266e natural symbol
+    // the last three here are \u266f sharp symbol, \u266d flat symbol, and \u266e natural symbol
     chord_accidental = { ["#"] | ["b"] | ["="] | ["♯"] | ["♭"] | ["♮"] }
 
     // chord type, e.g. m, min, maj7, dim, sus4: "programs should treat chord symbols quite liberally"

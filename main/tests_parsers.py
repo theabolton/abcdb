@@ -98,10 +98,11 @@ class ArpeggioTests(TestCase):
 
     def check(self, tin, tout, message):
         """Helper function to check for correct canonification."""
-        self.assertEquals(self.canonify_music_code(tin), tout, msg='Testing: ' + message)
+        self.assertEquals(self.canonify_music_code(tin), tout,
+                          msg='Testing Python parser: ' + message)
 
     def test_test_cases(self):
-        """ABC in, ABC out."""
+        """Verify that the Python parser correctly handles all test cases."""
         for (test_in, expected, message) in TESTS:
             self.check(test_in, expected, message)
 
@@ -160,10 +161,11 @@ class RustTests(TestCase):
 
     def check(self, tin, tout, message):
         """Helper function to check for correct canonification."""
-        self.assertEquals(self.canonify_music_code(tin), (0, tout), msg='Testing: ' + message)
+        self.assertEquals(self.canonify_music_code(tin), (0, tout),
+                          msg='Testing Rust parser: ' + message)
 
     def test_test_cases(self):
-        """ABC in, ABC out."""
+        """Verify that the Rust parser correctly handles all test cases."""
         for (test_in, expected, message) in TESTS:
             self.check(test_in, expected, message)
 
@@ -221,4 +223,4 @@ class ComparisonTests(TestCase):
         for (test_input, _, message) in TESTS:
             self.assertEquals(self.python_canonify_music_code(test_input),
                               self.rust_canonify_music_code(test_input),
-                              msg='Testing: ' + message)
+                              msg='Comparison testing: ' + message)

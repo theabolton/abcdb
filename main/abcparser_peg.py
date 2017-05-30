@@ -298,6 +298,10 @@ class ABCVisitor(PTNodeVisitor):
 
     # --- node visitors for particular rules, in case-insensitive alphabetical order by rule name
 
+    def visit_abc_eol(self, node, children):
+        if self.abc_debug: self.print_debug(node, children)
+        return ''.join(children).rstrip()
+
     def visit_bad_text_expression(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
         return '@' + ''.join(children) # add a non-specific placement symbol
@@ -312,6 +316,10 @@ class ABCVisitor(PTNodeVisitor):
         if text[1:2] in 'NRr' and self.text_string_decoder:
             text = self.text_string_decoder(text)
         return text
+
+    def visit_invisible_barline(self, node, children):
+        if self.abc_debug: self.print_debug(node, children)
+        return '[|]'
 
     def visit_note_length(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
