@@ -30,6 +30,16 @@ TESTS = [
     # input, expected output, description
     ('abc',         'abc',         'minimal function'),
     ('dcde d2c2|',  'dcde d2c2|',  'something'),
+    # 2.2.5 Comments and remarks
+    ('a[r:foo]b',   'a[r:foo]b',   'remark: normal use'),
+    ('[r:a\\"Ab]',  '[r:aÄb]',     'remark: interpreted as text string'),
+    # 3.1.8 Q: - tempo
+    ('[Q:"a\\AEb" 1/4=96]', '[Q:"aÆb" 1/4=96]', 'tempo: description interpreted as text string'),
+    ('[Q:1/4=96 "a\\AEb"]', '[Q:1/4=96 "aÆb"]', 'tempo: description interpreted as text string'),
+    # 3.1.11 N: - notes
+    ('[N:a\\"Ab]',  '[N:aÄb]',     'note: interpreted as text string'), # according to the table in §3.
+    # 3.1.15 R: - rhythm
+    ('[R:a\\"Ab]',  '[R:aÄb]',     'rhythm: interpreted as text string'), # according to the table in §3.
     # 4.3 Note lengths
     ('a2b',         'a2b',         'note length bigger: normal use'),
     ('a222b',       'a222b',       'note length bigger: large numbers'),
@@ -52,6 +62,8 @@ TESTS = [
     ('a/8b',        'a/8b',        'note length smaller: a/8 unchanged'),
     # 4.8 Repeat/bar symbols
     ('[]',          '[|]',         'non-standard: invisible bar line'),
+    # 4.18 Chord symbols
+    ('a"Am\\nC"b',  'a"Am\\nC"b',  "non-standard: '\\n' for newline in chord symbols"),
     # 4.19 Annotations
     ('a"^text"b',   'a"^text"b',   "annotation with '^'"),
     ('a"<text"b',   'a"<text"b',   "annotation with '<'"),
@@ -59,9 +71,49 @@ TESTS = [
     ('a"_text"b',   'a"_text"b',   "annotation with '_'"),
     ('a"@text"b',   'a"@text"b',   "annotation with '@'"),
     ('a"text"b',    'a"@text"b',   'bad annotation with no placement symbol'),
+    ('"a\\AEb"',    '"aÆb"',       'annotation interpreted as text string'),
     # 6.1.1 Typesetting linebreaks
     ('a\\',         'a\\',         'line continuation'),
     ('a\\ ',        'a\\',         'line continuation: trim trailing whitespace'),
+    # 8.2 Text strings
+    # - TeX-style mnemonics
+    ('[r:\\`A]',    '[r:À]',       "text strings: TeX mnemonic 'À'"),
+    ("[r:\\'A]",    '[r:Á]',       "text strings: TeX mnemonic 'Á'"),
+    ('[r:\\^A]',    '[r:Â]',       "text strings: TeX mnemonic 'Â'"),
+    ('[r:\\~A]',    '[r:Ã]',       "text strings: TeX mnemonic 'Ã'"),
+    ('[r:\\"A]',    '[r:Ä]',       "text strings: TeX mnemonic 'Ä'"),
+    ('[r:\\cC]',    '[r:Ç]',       "text strings: TeX mnemonic 'Ç'"),
+    ('[r:\\cc]',    '[r:ç]',       "text strings: TeX mnemonic 'ç'"),
+    ('[r:\\AA]',    '[r:Å]',       "text strings: TeX mnemonic 'Å'"),
+    ('[r:\\/O]',    '[r:Ø]',       "text strings: TeX mnemonic 'Ø'"),
+    ('[r:\\uE]',    '[r:Ĕ]',       "text strings: TeX mnemonic 'Ĕ'"),
+    ('[r:\\vZ]',    '[r:Ž]',       "text strings: TeX mnemonic 'Ž'"),
+    ('[r:\\HO]',    '[r:Ő]',       "text strings: TeX mnemonic 'Ő'"),
+    ('[r:\\ss]',    '[r:ß]',       "text strings: TeX mnemonic 'ß'"),
+    ('[r:\\xx]',    '[r:\\xx]',    "text strings: undefined TeX mnemonic"),
+    # - named HTML entities
+    ('[r:&AElig;]', '[r:Æ]',       "text strings: HTML entity 'Æ'"),
+    ('[r:&Omega;]', '[r:Ω]',       "text strings: HTML entity 'Ω'"),
+    ('[r:&foo;]',   '[r:&foo;]',   "text strings: undefined HTML entity"),
+    # - fixed width Unicode
+    ('[r:\\u0041]', '[r:A]',       "text strings: short Unicode escape 'A'"),
+    ('[r:\\u004a]', '[r:J]',       "text strings: short Unicode escape 'J'"),
+    ('[r:\\u004A]', '[r:J]',       "text strings: short Unicode escape 'J'"),
+    ('[r:\\u0000]', '[r:\\u0000 ]', "text strings: short Unicode escape, don't sub control characters"),
+    ('[r:\\u0080]', '[r:\\u0080 ]', "text strings: short Unicode escape, don't sub control characters"),
+    ('[r:\\u00a0]', '[r: ]',       "text strings: short Unicode escape, sub NBSP to regular space"),
+    ('[r:\\uBD01]', '[r:uBD01]',   "text strings: short Unicode escape, illegal value"),
+    ('[r:\\U00000041]', '[r:A]',   "text strings: short Unicode escape 'A'"),
+    ('[r:\\U0000004a]', '[r:J]',   "text strings: short Unicode escape 'J'"),
+    ('[r:\\U0000004A]', '[r:J]',   "text strings: short Unicode escape 'J'"),
+    ('[r:\\U00000000]', '[r:\\U00000000 ]', "text strings: short Unicode escape, don't sub control characters"),
+    ('[r:\\U00000080]', '[r:\\U00000080 ]', "text strings: short Unicode escape, don't sub control characters"),
+    ('[r:\\U000000a0]', '[r: ]',   "text strings: short Unicode escape, sub NBSP to regular space"),
+    ('[r:\\U0000BD01]', '[r:uBD01]', "text strings: short Unicode escape, illegal value"),
+    # - double-backslash escape
+    ('[r:\\\\u0041]', '[r:\\u0041]', "text strings: double-backslash escape"),
+    # - backslash-ampersand escape
+    ('[r:\\&AElig;]', '[r:&AElig;]', "text strings: backslash-ampersand escape"),
 ]
 
 # ========== Arpeggio (Python) Parser Tests ==========
