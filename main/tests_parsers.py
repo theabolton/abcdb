@@ -24,6 +24,46 @@
 from django.test import TestCase, tag
 
 
+# ========== Test Cases ==========
+
+TESTS = [
+    # input, expected output, description
+    ('abc',         'abc',         'minimal function'),
+    ('dcde d2c2|',  'dcde d2c2|',  'something'),
+    # 4.3 Note lengths
+    ('a2b',         'a2b',         'note length bigger: normal use'),
+    ('a222b',       'a222b',       'note length bigger: large numbers'),
+    ('a1b',         'ab',          'note length bigger: a1 -> a'),
+    ('a3/2b',       'a3/2b',       'note length full: normal use'),
+    ('a333/222b',   'a333/222b',   'note length full: large numbers'),
+    ('a1/1b',       'ab',          'note length full: a1/1 -> a'),
+    ('a2/1b',       'a2b',         'note length full: a2/1 -> a2'),
+    ('a1/2b',       'a/b',         'note length full: a1/2 -> a/'),
+    ('a1/4b',       'a//b',        'note length full: a1/4 -> a//'),
+    ('a1/3b',       'a/3b',        'note length full: normal fractional value'),
+    ('a1/8b',       'a/8b',        'note length full: normal 1/8th'),
+    ('a/b',         'a/b',         'note length slashes: normal 1/2'),
+    ('a//b',        'a//b',        'note length slashes: normal 1/4'),
+    ('a///b',       'a/8b',        'note length slashes: a/// -> a/8'),
+    ('a//////b',    'a/64b',       'note length slashes: a////// -> a/64'),
+    ('a/3b',        'a/3b',        'note length smaller: normal use'),
+    ('a/2b',        'a/b',         'note length smaller: a/2 -> a/'),
+    ('a/4b',        'a//b',        'note length smaller: a/4 -> a//'),
+    ('a/8b',        'a/8b',        'note length smaller: a/8 unchanged'),
+    # 4.8 Repeat/bar symbols
+    ('[]',          '[|]',         'non-standard: invisible bar line'),
+    # 4.19 Annotations
+    ('a"^text"b',   'a"^text"b',   "annotation with '^'"),
+    ('a"<text"b',   'a"<text"b',   "annotation with '<'"),
+    ('a">text"b',   'a">text"b',   "annotation with '>'"),
+    ('a"_text"b',   'a"_text"b',   "annotation with '_'"),
+    ('a"@text"b',   'a"@text"b',   "annotation with '@'"),
+    ('a"text"b',    'a"@text"b',   'bad annotation with no placement symbol'),
+    # 6.1.1 Typesetting linebreaks
+    ('a\\',         'a\\',         'line continuation'),
+    ('a\\ ',        'a\\',         'line continuation: trim trailing whitespace'),
+]
+
 # ========== Arpeggio (Python) Parser Tests ==========
 
 @tag('parser')
@@ -56,13 +96,14 @@ class ArpeggioTests(TestCase):
         self.assertTrue(s.endswith(expected),
                         msg="looking for '...{}', found '{}'".format(expected, s))
 
-    def check(self, tin, tout):
+    def check(self, tin, tout, message):
         """Helper function to check for correct canonification."""
-        self.assertEquals(self.canonify_music_code(tin), tout)
+        self.assertEquals(self.canonify_music_code(tin), tout, msg='Testing: ' + message)
 
-    def test_some_random_ABC(self):
+    def test_test_cases(self):
         """ABC in, ABC out."""
-        self.check('dcde d2c2|', 'dcde d2c2|')
+        for (test_in, expected, message) in TESTS:
+            self.check(test_in, expected, message)
 
 
 # ========== Rust Parser Tests ==========
@@ -117,16 +158,20 @@ class RustTests(TestCase):
         self.assertEquals(message, "called `Result::unwrap()` on an `Err` "
                                    "value: Utf8Error { valid_up_to: 1 }")
 
-    def check(self, tin, tout):
+    def check(self, tin, tout, message):
         """Helper function to check for correct canonification."""
-        self.assertEquals(self.canonify_music_code(tin), (0, tout))
+        self.assertEquals(self.canonify_music_code(tin), (0, tout), msg='Testing: ' + message)
 
-    def test_some_random_ABC(self):
+    def test_test_cases(self):
         """ABC in, ABC out."""
-        self.check('dcde d2c2|', 'dcde d2c2|')
+        for (test_in, expected, message) in TESTS:
+            self.check(test_in, expected, message)
 
 
 # ========== Tests which Compare the Output of Both Parsers ==========
+
+# -FIX- At this time, this is redundant: for any particular test input, if the individual tests
+# pass, then the comparison should pass as well.
 
 @tag('parser')
 class ComparisonTests(TestCase):
@@ -173,5 +218,7 @@ class ComparisonTests(TestCase):
 
     def test_comparisons(self):
         """Verify that the output of the Python and Rust parsers is identical."""
-        abc = "abc"
-        self.assertEquals(self.python_canonify_music_code(abc), self.rust_canonify_music_code(abc))
+        for (test_input, _, message) in TESTS:
+            self.assertEquals(self.python_canonify_music_code(test_input),
+                              self.rust_canonify_music_code(test_input),
+                              msg='Testing: ' + message)
