@@ -633,7 +633,7 @@ class ParserUtilityTests(TestCase):
         self.assertEqual(decode_abc_text_string('\\u0041'), 'A')
         self.assertEqual(decode_abc_text_string('\\U00000041'), 'A')
         self.assertEqual(decode_abc_text_string('\\u00A0'), ' ')         # nbsp -> space
-        self.assertEqual(decode_abc_text_string('\\u000A'), '\\u000A')   # don't sub controls
+        self.assertEqual(decode_abc_text_string('\\u000A'), '^u000A')    # don't sub controls
         self.assertEqual(decode_abc_text_string('\\"A'), 'Ä')
         self.assertEqual(decode_abc_text_string('\\\\u0041'), '\\u0041') # double backslash
 

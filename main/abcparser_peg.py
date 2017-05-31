@@ -234,6 +234,11 @@ parser = ParserPEG(
    # chord type, e.g. m, min, maj7, dim, sus4: "programs should treat chord symbols quite liberally"
    chord_type = r'[A-Za-z\\d+\\-]+'
 
+   # Norbeck included '\\n' and ';' as non-standard extensions indicating a newline within the
+   # chord symbol or annotation. The ';' conflicts with named entities in ABC text strings, so
+   # we leave that out.
+   chord_newline = '\\\\n'  # from Norbeck; non-standard extension
+
    # ==== 4.19 Annotations
 
    text_expression = ( ( "^" / "<" / ">" / "_" / "@" ) (!chord_newline non_quote)+ ) /
@@ -263,7 +268,6 @@ parser = ParserPEG(
 
    # ==== utility rules
 
-   chord_newline = '\\\\n' / ';'  # from Norbeck; non-standard extension
    measure_repeat = r'//?'        # from Norbeck; non-standard extension
    non_quote = r'[^"]'
    DIGITS = r'\\d+'
@@ -305,9 +309,6 @@ class ABCVisitor(PTNodeVisitor):
     def visit_bad_text_expression(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
         return '@' + ''.join(children) # add a non-specific placement symbol
-
-    def visit_chord_newline(self, node, children):
-        return ';'
 
     def visit_ifield_text(self, node, children):
         text = node.value
@@ -354,6 +355,13 @@ class ABCVisitor(PTNodeVisitor):
     def visit_note_length_smaller(self, node, children):
         if self.abc_debug: self.print_debug(node, children)
         return (1, int(children[1]))
+
+    def visit_tempo_desc(self, node, children):
+        if self.abc_debug: self.print_debug(node, children)
+        text = ''.join(children)
+        if self.text_string_decoder:
+            text = self.text_string_decoder(text)
+        return text
 
     def visit_text_expression(self, node, children):
         text = ''.join(children)

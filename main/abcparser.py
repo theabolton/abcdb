@@ -211,6 +211,7 @@ ABC_NAMED_ENTITIES = {
 
 RE_ABC_CHARACTER_ENCODINGS = re.compile(r"""
     ( \\\\               |  # \\ escaped backslash
+      \\&                |  # \& escaped ampersand
       \\u[0-9A-Fa-f]{4}  |  # \uXXXX hex escape
       \\U[0-9A-Fa-f]{8}  |  # \UXXXXXXXX hex escape
       \\..               |  # \xx TeX-style mnemonic
@@ -230,14 +231,16 @@ def decode_abc_text_string(text):
             c = int(m[2:], 16)
             if c == 160:
                 return ' '  # sub regular space for non-breaking-space
-            if c in range(0, 32) or c in range(128, 160):
-                return m    # don't sub control characters
+            if c in range(0, 32) or c in range(128, 160) or c in range(0xdb00, 0xe000):
+                # don't sub control characters or invalid code points, instead return the original
+                # escape sequence with '\' replaced by '^'
+                return '^' + m[1:]
             else:
                 return codecs.decode(match.group(0), "unicode_escape")
         elif len(m) == 3:  # \xx TeX-style mnemonic
             return ABC_CHARACTER_MNEMONICS.get(m) or m
-        else:  # \\ escaped backslash
-            return '\\'
+        else:  # \\ escaped backslash or ampersand
+            return m[1:]
     text = RE_ABC_CHARACTER_ENCODINGS.sub(decode, text)
     return unicodedata.normalize('NFC', text)
 

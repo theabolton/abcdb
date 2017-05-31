@@ -22,7 +22,9 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 extern crate pest;
+extern crate phf;
 
+use std::char;
 use std::iter::FromIterator;
 
 use pest::prelude::*;
@@ -36,13 +38,13 @@ use grammar::{Rdp,Rule};
 // the RString 'Slice' variant is used to accumulate the pieces without allocating a String. Only
 // when a parse rule result needs to be changed will a String need to be allocated.
 
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 struct RSlice {
     start: usize,
     end: usize
 }
 
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 enum RString {
     Slice(RSlice),
     Str(String)
@@ -161,7 +163,7 @@ fn gather_children(context: &Context) -> (RString, usize) {
         (rstr, child_i)
     } else {
         // no children, just return the text of this match
-        (RString::from_slice(q[i].start, q[i].end), i + 1)
+        (RString::from_token(&q[i]), i + 1)
     }
 }
 
@@ -187,7 +189,6 @@ fn ruler_canonify_abc(context: &Context) -> (RString, usize) {
     let q = context.q;
     let input = context.input;
     match q[i].rule {
-        // !FIX! canonicize all the "non-standard, from Norbeck" things
         Rule::abc_eol => {
             let (rstr, new_i) = gather_children(context);
             // trim trailing whitespace
@@ -201,9 +202,16 @@ fn ruler_canonify_abc(context: &Context) -> (RString, usize) {
             s = s.add(rstr, input);
             (s, new_i)
         }
-        Rule::chord_newline => {
-            // canonicize to ';'
-            (RString::Str(';'.to_string()), i + 1)
+        Rule::ifield_text => {
+            let (rstr, new_i) = gather_children(context);
+            let field_type = &input[(q[i].start + 1)..(q[i].start + 2)];
+            if (field_type == "N") | (field_type == "R") | (field_type == "r") {
+                if let Some(replacement) = decode_abc_text_string(&rstr.clone().to_string(input)) {
+                    return (RString::Str(replacement), new_i);
+                }
+
+            }
+            (rstr, new_i)
         }
         Rule::invisible_barline => {
             if &input[q[i].start..q[i].end] == "[]" {
@@ -258,13 +266,21 @@ fn ruler_canonify_abc(context: &Context) -> (RString, usize) {
                 _ => (RString::from_token(&q[i]), i + 2),
             }
         }
+        Rule::tempo_desc |
+        Rule::text_expression => {
+            let (rstr, new_i) = gather_children(context);
+            match decode_abc_text_string(&rstr.clone().to_string(input)) {
+                Some(replacement) => (RString::Str(replacement), new_i),
+                None => (rstr, new_i),
+            }
+        }
         Rule::WSP => {
             // squash any whitespace to a single space
             if &input[q[i].start..q[i].end] == " " {
                 // it is just a single space already
-                (RString::from_slice(q[i].start, q[i].end), i + 1)
+                (RString::from_token(&q[i]), i + 1)
             } else {
-                (RString::Str(' '.to_string()), i + 1)
+                (RString::from_str(" "), i + 1)
             }
         }
         _ => {  // default rule, recursively gather children, if any
@@ -277,3 +293,71 @@ pub fn canonify_abc_visitor(parser: &Rdp<pest::StringInput>) -> String {
     visit_parse_tree(parser, &ruler_canonify_abc)
 }
 
+// ======== ABC Text String Character Encoding ========
+
+// include static phf maps of ABC_CHARACTER_MNEMONICS and ABC_NAMED_ENTITIES
+// see src/table_gen.rs for more information
+include!(concat!(env!("OUT_DIR"), "/tables.rs"));
+
+fn ruler_decode_abc_text_string(context: &Context) -> (RString, usize) {
+    let i = context.index;
+    let q = context.q;
+    let input = context.input;
+    match q[i].rule {
+        Rule::backslash_ampersand |
+        Rule::double_backslash => {
+            (RString::from_slice(q[i].start + 1, q[i].end), i + 1)
+        }
+        Rule::named_entity => {
+            let ne = &input[(q[i].start + 1)..(q[i].end - 1)];
+            match ABC_NAMED_ENTITIES.get(ne) {
+                Some(c) => (RString::Str(c.to_string()), i + 1),
+                None => (RString::from_token(&q[i]), i + 1),
+            }
+        }
+        Rule::short_unicode_escape |
+        Rule::long_unicode_escape => {
+            let (_, new_i) = gather_children(context);
+            let hex = &input[(q[i].start + 2)..q[i].end];
+            let c = u32::from_str_radix(hex, 16).unwrap();
+            let bad_char_fn = || {
+                // return the escape sequence with the initial backslash replaced with a caret
+                let s = RString::from_str("^");
+                s.add(RString::from_slice(q[i].start + 1, q[i].end), input)
+            };
+            if (c < 32) || (c >= 128 && c < 160) {
+                // don't convert control characters
+                (bad_char_fn(), new_i)
+            } else if c == 160 {
+                // substitute regular space for non-breaking space
+                (RString::from_str(" "), new_i)
+            } else {
+                match char::from_u32(c) {
+                    // successful conversion
+                    Some(c) => (RString::Str(c.to_string()), new_i),
+                    // illegal code point, don't replace
+                    None => (bad_char_fn(), new_i)
+                }
+            }
+        }
+        Rule::tex_mnemonic => {
+            let mn = &input[(q[i].start + 1)..q[i].end];
+            match ABC_CHARACTER_MNEMONICS.get(mn) {
+                Some(c) => (RString::Str(c.to_string()), i + 1),
+                None => (RString::from_token(&q[i]), i + 1),
+            }
+        }
+        _ => {  // default rule, recursively gather children, if any
+            gather_children(context)
+        }
+    }
+}
+
+fn decode_abc_text_string(text: &str) -> Option<String> {
+    let mut parser = Rdp::new(StringInput::new(text));
+    if parser.text_string() {
+        Some(visit_parse_tree(&parser, &ruler_decode_abc_text_string))
+    } else {
+        None
+    }
+}

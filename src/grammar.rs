@@ -242,6 +242,11 @@ impl_rdp! {
     // chord type, e.g. m, min, maj7, dim, sus4: "programs should treat chord symbols quite liberally"
     chord_type = { (['A'..'Z'] | ['a'..'z'] | ['0'..'9']+ | ["-"])+ }
 
+    // Norbeck included '\n' and ';' as non-standard extensions indicating a newline within the
+    // chord symbol or annotation. The ';' conflicts with named entities in ABC text strings, so
+    // we leave that out.
+    chord_newline = { ["\\n"] }          // from Norbeck; non-standard extension
+
     // ==== 4.19 Annotations
 
     text_expression = { ( ( ["^"] | ["<"] | [">"] | ["_"] | ["@"] ) ~
@@ -275,11 +280,27 @@ impl_rdp! {
 
     // ==== utility rules
 
-    chord_newline = { ["\\n"] | [";"] }  // from Norbeck; non-standard extension
     measure_repeat = { ["/"] ~ ["/"]? }  // from Norbeck; non-standard extension
     non_quote = { !["\""] ~ any }
     non_right_bracket = { !["]"] ~ any }
     DIGITS = { ['0'..'9']+ }
     WSP = { ([" "] | ["\t"])+ }  // whitespace
+
+    // ==== end of ABC grammar
+
+    // ========================================================================
+
+    // A grammer for ABC text string character encodings
+    text_string = { ( !abc_character_encoding ~ any )* ~ abc_character_encoding ~
+                    ( abc_character_encoding | any )* ~ eoi }
+    abc_character_encoding = { double_backslash | backslash_ampersand | short_unicode_escape |
+                               long_unicode_escape | tex_mnemonic | named_entity }
+    double_backslash = { ["\\\\"] }
+    backslash_ampersand = { ["\\&"] }
+    short_unicode_escape = { ["\\u"] ~ HEX ~ HEX ~ HEX ~ HEX }
+    long_unicode_escape = { ["\\U"] ~ HEX ~ HEX ~ HEX ~ HEX ~ HEX ~ HEX ~ HEX ~ HEX }
+    tex_mnemonic = { ["\\"] ~ any ~ any }
+    named_entity = { ["&"] ~ ( ![";"] ~ any )+ ~ [";"] }
+    HEX = { ['0'..'9'] | ['a'..'f'] | ['A'..'F'] }
   }
 }
