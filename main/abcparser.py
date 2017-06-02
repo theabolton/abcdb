@@ -25,6 +25,7 @@
 
 import abc
 import codecs
+import os
 import re
 import unicodedata
 
@@ -285,6 +286,34 @@ class ABCParser(metaclass=abc.ABCMeta):
     def __init__(self):
         self.reset()
 
+        # default to Python PEG parser
+        self.handle_music_code = self.handle_music_code_python
+
+        # try to load the Rust PEG parser
+        if os.path.isfile('target/release/libabcparser_peg.so'):
+            import ctypes
+            from ctypes import (POINTER, c_char_p, c_int32)
+
+            peglib = None
+            try:
+                peglib = ctypes.cdll.LoadLibrary("target/release/libabcparser_peg.so")
+            except:
+                pass
+            if peglib:
+                class CallResult(ctypes.Structure):
+                    _fields_ = [("status", c_int32), ("text", c_char_p)]
+
+                self.canonify_music_code = peglib.canonify_music_code
+                self.canonify_music_code.argtypes = (c_char_p, )
+                self.canonify_music_code.restype = POINTER(CallResult)
+
+                self.free_result = peglib.free_result
+                self.free_result.argtypes = (POINTER(CallResult), )
+                self.free_result.restype = None
+
+                # success, use the Rust parser
+                self.handle_music_code = self.handle_music_code_rust
+
 
     def reset(self):
         # parser states, and what they expect:
@@ -441,12 +470,33 @@ class ABCParser(metaclass=abc.ABCMeta):
         tune.full_tune_append(line + comment)
 
 
-    def handle_music_code(self, tune, line, comment):
+    def handle_music_code_python(self, tune, line, comment):
         tune.full_tune_append(line + comment)
         try:
             line = canonify_music_code(line, text_string_decoder=decode_abc_text_string)
         except NoMatch as err:
             self.log('error', 'Music code failed to parse', str(err))
+        tune.canonical_append('body', line)
+
+
+    def handle_music_code_rust(self, tune, line, comment):
+        tune.full_tune_append(line + comment)
+        ptr = self.canonify_music_code(line.encode('utf-8'))
+        status = ptr[0].status
+        text = None
+        try:
+            text = ptr[0].text.decode('utf-8')
+        except:
+            status = 2
+            text = "Parser returned illegal UTF_8"
+        finally:
+            self.free_result(ptr)
+        if status == 2:  # panic
+            self.log('error', 'The Rust parser terminated abnormally', text)
+        elif status == 1:  # failed to parse
+            self.log('error', 'Music code failed to parse', text)
+        else:  # status == 0, normal
+            line = text
         tune.canonical_append('body', line)
 
 

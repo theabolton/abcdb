@@ -13,6 +13,6 @@ install:
   - curl https://sh.rustup.rs -sSf | sh -s -- -y
   - export PATH="$PATH:~/.cargo/bin"
   - rustup toolchain install stable
-  - cargo build
+  - cargo build --release
 script:
   - python manage.py makemigrations && python manage.py test main --exclude-tag fetch
