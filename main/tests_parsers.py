@@ -174,7 +174,7 @@ class RustTests(TestCase):
         class CallResult(ctypes.Structure):
             _fields_ = [("status", c_int32), ("text", c_char_p)]
 
-        self._peglib = ctypes.cdll.LoadLibrary("target/debug/libabcparser_peg.so")
+        self._peglib = ctypes.cdll.LoadLibrary("target/release/libabcparser_peg.so")
 
         self._canonify_music_code = self._peglib.canonify_music_code
         self._canonify_music_code.argtypes = (c_char_p, )
@@ -240,7 +240,7 @@ class ComparisonTests(TestCase):
         class CallResult(ctypes.Structure):
             _fields_ = [("status", c_int32), ("text", c_char_p)]
 
-        self._peglib = ctypes.cdll.LoadLibrary("target/debug/libabcparser_peg.so")
+        self._peglib = ctypes.cdll.LoadLibrary("target/release/libabcparser_peg.so")
 
         self._canonify_music_code = self._peglib.canonify_music_code
         self._canonify_music_code.argtypes = (c_char_p, )
