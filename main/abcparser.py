@@ -27,6 +27,7 @@ import abc
 import codecs
 import os
 import re
+import time
 import unicodedata
 
 from arpeggio import NoMatch
@@ -288,6 +289,7 @@ class ABCParser(metaclass=abc.ABCMeta):
 
         # default to Python PEG parser
         self.handle_music_code = self.handle_music_code_python
+        self.parser = "Python"
 
         # try to load the Rust PEG parser
         if os.path.isfile('target/release/libabcparser_peg.so'):
@@ -313,6 +315,7 @@ class ABCParser(metaclass=abc.ABCMeta):
 
                 # success, use the Rust parser
                 self.handle_music_code = self.handle_music_code_rust
+                self.parser = "Rust"
 
 
     def reset(self):
@@ -625,7 +628,9 @@ class ABCParser(metaclass=abc.ABCMeta):
                 self.log('warn', "Non-field found before 'K:' field", line)
                 self.state = 'tunebody'
             if self.state == 'tunebody':
+                tmp = time.process_time()
                 self.handle_music_code(tune, line, comment)
+                self.music_code_parse_time += time.process_time() - tmp
             else:
                 self.log('ignore', self.state.title(), line + comment)
 

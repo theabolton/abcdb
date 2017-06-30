@@ -27,6 +27,7 @@ import hashlib
 import io
 import operator
 import re
+import time
 import urllib.parse
 
 from django.db import transaction
@@ -47,6 +48,8 @@ class UploadParser(ABCParser):
     gather statistics."""
     def __init__(self, username=None, filename=None, method=None):
         super().__init__()
+        self.process_time_start = time.process_time()
+        self.music_code_parse_time = 0
         self.journal = ''
         self.counts = collections.Counter()
         self.tune_had_errors = False
@@ -291,5 +294,9 @@ def handle_upload(request):
     elapsed = datetime.datetime.now(datetime.timezone.utc) - p.collection_inst.date
     elapsed = elapsed.total_seconds()
     results.append('Processed {} lines in {:.2f} seconds'.format(p.line_number, elapsed))
+    results.append('Process CPU time: {:.2f} seconds'.format(time.process_time() -
+                                                             p.process_time_start))
+    results.append('Low-level (music code) ABC parse time (using {} parser): {:.2f} seconds'
+                       .format(p.parser, p.music_code_parse_time))
     return render(request, 'main/upload-post.html', { 'results': results,
                                                       'status': p.get_journal() })
