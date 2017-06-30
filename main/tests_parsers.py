@@ -184,6 +184,11 @@ class RustTests(TestCase):
         self._free_result.argtypes = (POINTER(CallResult), )
         self._free_result.restype = None
 
+    def assertStringContains(self, haystack, needle, msg=None):
+        if not msg:
+            msg = "did not find '{}' in '{}'".format(needle, haystack)
+        self.assertTrue(needle in haystack, msg)
+
     def canonify_music_code(self, s):
         """Python wrapper to the Rust canonify_music_code() function."""
         ptr = self._canonify_music_code(s.encode('utf-8'))
@@ -209,8 +214,8 @@ class RustTests(TestCase):
         finally:
             self._free_result(ptr)
         self.assertEqual(status, 2)
-        self.assertEquals(message, "called `Result::unwrap()` on an `Err` "
-                                   "value: Utf8Error { valid_up_to: 1 }")
+        self.assertStringContains(message, 'unwrap')
+        self.assertStringContains(message, 'Utf8Error')
 
     def check(self, tin, tout, message):
         """Helper function to check for correct canonification."""
