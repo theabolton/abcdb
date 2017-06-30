@@ -355,6 +355,7 @@ class ABCParser(metaclass=abc.ABCMeta):
         self.encoding = 'default'
 
         self.line_number = 0
+        self.music_code_parse_time = 0
 
 
     @abc.abstractmethod
