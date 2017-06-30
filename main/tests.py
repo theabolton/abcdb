@@ -657,10 +657,17 @@ class ABCParserTests(TestCase):
     class TestParser(ABCParser):
         """A minimal ABCParser subclass."""
         lastlog = None
+        lasttune = None
+        start_tune_calls = 0
         def log(self, severity, message, text):
             self.lastlog = message
         def process_tune(self, tune):
-            pass
+            self.lasttune = tune
+        def start_tune(self):
+            self.start_tune_calls += 1
+        def parse(self, abc_bytes):
+            import io
+            super().parse(io.BytesIO(abc_bytes))
 
     def test_handle_encoding(self):
         p = self.TestParser()
@@ -732,3 +739,106 @@ class ABCParserTests(TestCase):
         self.assertEqual(p.decode_from_raw(b'a\x81b'), 'a\\u0081b') # C1 controls should be escaped
         p.encoding = 'us-ascii'
         self.assertEqual(p.decode_from_raw(b'a\nb\x7fc'), 'a\\u000ab\\u007fc') # as should C0
+
+    def test_full_parser(self):
+        """Tests that the full parser builds the Tune instance correctly."""
+        p = self.TestParser()
+        # for debugging tests:
+        #import sys
+        #sys.stderr.write('\n' + str(p.lasttune).replace('\n', '\\n'))
+        #sys.stderr.write('\n' + str(p.lastlog).replace('\n', '\\n'))
+        #sys.stderr.write('\nstart_tune_calls = {}'.format(p.start_tune_calls))
+
+        # a very simple tune
+        p.parse(b'X:1\nT:Title\nK:A\nabc\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nT: Title\nF| X:1\nF| T:Title\nF| K:A\nF| abc\nF| \n'
+                         'D| 3K000000 K:A\nD| 5_000001 abc\nD| 5_000002 \n')
+        p.reset()
+
+        # the expected str(Tune) for the next few tests
+        expected = ('X: 1\nF| X:1\nF| K:G\nF| bagabbb2|\nF| \n'
+                    'D| 3K000000 K:G\nD| 5_000001 bagabbb2|\nD| 5_000002 \n')
+        # extra blank lines at end
+        p.parse(b'\nX:1\nK:G\nbagabbb2|\n\n\n')
+        self.assertEqual(str(p.lasttune), expected)
+        p.reset()
+        # premature end of file
+        p.parse(b'X:1\nK:G\nbagabbb2|\n')
+        self.assertEqual(str(p.lasttune), expected)
+        self.assertEqual(p.lastlog, 'Unexpected end of file inside tune')
+        p.reset()
+        # UTF-8 "Byte Order Mark"
+        p.parse(b'\xef\xbb\xbfX:1\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune), expected)
+        p.reset()
+        # stylesheet directives
+        p.parse(b'%%papersize A4\n%%abc-charset utf-8\nX:1\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune), expected)
+        p.reset()
+
+        # comment lines, and escaped percent sign
+        p.parse(b'% header comment\nX:1\nT:Title with "\\%" Character\n% tuneheader comment\n'
+                b'K:G % info field comment\n% tunebody comment\nbagabbb2| % musiccode comment\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nT: Title with "\%" Character\nF| X:1\n'
+                         'F| T:Title with "\%" Character\nF| % tuneheader comment\n'
+                         'F| K:G % info field comment\nF| % tunebody comment\n'
+                         'F| bagabbb2| % musiccode comment\nF| \nD| 3K000000 K:G\n'
+                         'D| 5_000001 bagabbb2|\nD| 5_000002 \n')
+        p.reset()
+        # tabs
+        p.parse(b'X:1\nT:Title\twith\tTabs\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nT: Title with    Tabs\nF| X:1\nF| T:Title with    Tabs\nF| K:G\n'
+                         'F| bagabbb2|\nF| \n'
+                         'D| 3K000000 K:G\nD| 5_000001 bagabbb2|\nD| 5_000002 \n')
+        p.reset()
+        # continuation field
+        p.parse(b'X:1\nH:history\n+:more history\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nF| X:1\nF| H:history\nF| +:more history\nF| K:G\nF| bagabbb2|\n'
+                         'F| \nD| 3K000000 K:G\nD| 5_000001 bagabbb2|\nD| 5_000002 \n')
+        p.reset()
+        # history continuation without '+'
+        # -FIX- leading whitespace handling broken
+        p.parse(b'X:1\nH:history\n  more history\n\n and more history\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nF| X:1\nF| H:history\nF| +:more history\nF| \nD| 5_000000 \n')
+        p.reset()
+        # fields outside of tune
+        p.parse(b'I:abc-version 2.1\n\nI:abc-charset iso-8859-1\nH:file history\n  continuation\n'
+                b'X:1\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nF| X:1\nF| K:G\nF| bagabbb2|\nF| \nD| 3K000000 K:G\n'
+                         'D| 5_000001 bagabbb2|\nD| 5_000002 \n')
+        p.reset()
+        # musiccode in tuneheader
+        p.parse(b'X:1\ngaba g4|\nK:G\nbagabbb2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nF| X:1\nF| gaba g4|\nF| K:G\nF| bagabbb2|\nF| \n'
+                         'D| 5_000000 gaba g4|\nD| 5_000001 K:G\nD| 5_000002 bagabbb2|\n'
+                         'D| 5_000003 \n')
+        self.assertEqual(p.lastlog, "Non-field found before 'K:' field")
+        p.reset()
+
+        # a larger, standard-following tune
+        p.parse(b'X:1\nT:Title\nH:Very old.\nM:4/4\nK:G\ngbag e2e2|d2d2 g4|\nK:A % modulate\n'
+                b'acba f2f2|e2e2 a4|\nM:3/4 % change meter\na2cbaf|e2e2a2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nT: Title\nF| X:1\nF| T:Title\nF| H:Very old.\nF| M:4/4\nF| K:G\n'
+                         'F| gbag e2e2|d2d2 g4|\nF| K:A % modulate\nF| acba f2f2|e2e2 a4|\n'
+                         'F| M:3/4 % change meter\nF| a2cbaf|e2e2a2|\nF| \nD| 2M000000 M:4/4\n'
+                         'D| 3K000001 K:G\nD| 5_000002 gbag e2e2|d2d2 g4|\nD| 5_000003 K:A\n'
+                         'D| 5_000004 acba f2f2|e2e2 a4|\nD| 5_000005 M:3/4\n'
+                         'D| 5_000006 a2cbaf|e2e2a2|\nD| 5_000007 \n')
+        p.reset()
+        # a tune with a bunch of non-standard stuff
+        p.start_tune_calls = 0 # second 'X:' in tune should NOT call start_tune() again!
+        p.parse(b'X:1\nK:G\nbagabbb2|\nX:2\naaa2 +bdd2|\n\n')
+        self.assertEqual(str(p.lasttune),
+                         'X: 1\nF| X:1\nF| K:G\nF| bagabbb2|\nF| X:2\nF| aaa2 +bdd2|\nF| \n'
+                         'D| 3K000000 K:G\nD| 5_000001 bagabbb2|\nD| 5_000002 aaa2 +bdd2|\n'
+                         'D| 5_000003 \n')
+        self.assertEqual(p.lastlog, 'Music code failed to parse')
+        self.assertEqual(p.start_tune_calls, 1, 'start_tune_calls should be 1')

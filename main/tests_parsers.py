@@ -40,6 +40,8 @@ TESTS = [
     ('[N:a\\"Ab]',  '[N:aÄb]',     'note: interpreted as text string'), # according to the table in §3.
     # 3.1.15 R: - rhythm
     ('[R:a\\"Ab]',  '[R:aÄb]',     'rhythm: interpreted as text string'), # according to the table in §3.
+    # 3.1.17 I: - instruction
+    ('[I:a\\"Ab]',  '[I:a\\"Ab]',  'instruction: NOT interpreted as text string'),
     # 4.3 Note lengths
     ('a2b',         'a2b',         'note length bigger: normal use'),
     ('a222b',       'a222b',       'note length bigger: large numbers'),
