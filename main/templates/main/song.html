@@ -9,7 +9,7 @@
 {{ svg|safe }}
 <p>Titles used for any instance of this song include:</p>
 <ul style="list-style: none;">
-{% for t in titles %}<li><a href="/title/{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
+{% for t in titles %}<li><a href="/graph/t{{ t.pk }}/">{{ t.title }}</a></li>{% endfor %}
 </ul>
 <p>Instances of this song:</p>
 <ul style="list-style: none;">

@@ -19,7 +19,7 @@
         {% endif %}
         <ul style="list-style: none;">
         {% for title in results %}
-            <li><a href="/title/{{ title.pk }}/">{{ title.title }}</a></li>
+            <li><a href="/graph/t{{ title.pk }}/">{{ title.title }}</a></li>
         {% endfor %}
         </ul>
         {% if results.has_other_pages %}

@@ -201,11 +201,12 @@ function load_graph(error, json) {
     svg.selectAll("g.node").each(function(_d, _i, _nodes) {
             /* wrap the contents of each node group in an <a xlink:href=...> tag... */
             var href;
-            if (_d == focus_node) {
-                switch (focus_node.charAt(0)) {
-                  case "s":  href = "/song/"     + focus_node.slice(1) + "/"; break;
-                  case "t":  href = "/title/"    + focus_node.slice(1) + "/"; break;
-                  case "i":  href = "/instance/" + focus_node.slice(1) + "/"; break;
+            const allow_refocus = false; /* refocus is not useful when entire graph is shown */
+            if (!allow_refocus || _d == focus_node) {
+                switch (_d.charAt(0)) {
+                  case "s":  href = "/song/"     + _d.slice(1) + "/"; break;
+                  case "t":  href = "/title/"    + _d.slice(1) + "/"; break;
+                  case "i":  href = "/instance/" + _d.slice(1) + "/"; break;
                 }
             } else {
                 href = "/graph/" + _d + "/";
@@ -217,8 +218,10 @@ function load_graph(error, json) {
                 a.appendChild(this.firstChild);
             }
             /* ...but wire the click event to our Ajax handler */
-            d3.select(this).select("a")
-                .on("click", on_click);
+            if (allow_refocus) {
+                d3.select(this).select("a")
+                    .on("click", on_click);
+            }
     });
 
     /* center graph */

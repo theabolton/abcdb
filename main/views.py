@@ -195,10 +195,13 @@ def graph_view(request, tune_id=None):
     try:
         if node_type == 's':
             Song.objects.get(pk=pk)
+            item = 'Song ' + pk
         elif node_type == 't':
             Title.objects.get(pk=pk)
+            item = 'Title ' + pk
         elif node_type == 'i':
             Instance.objects.get(pk=pk)
+            item = 'Instance ' + pk
         elif node_type == 'c':
             Collection.object.get(pk=pk)
         else:
@@ -206,7 +209,7 @@ def graph_view(request, tune_id=None):
     except ObjectDoesNotExist:
         return render(request, 'main/graph.html', { 'error': True })
 
-    return render(request, 'main/graph.html')
+    return render(request, 'main/graph.html', { 'item': item })
 
 
 class InstanceView(generic.DetailView):
