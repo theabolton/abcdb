@@ -594,7 +594,8 @@ class ABCParser(metaclass=abc.ABCMeta):
                     continue
 
                 if field_type == 'X':  # start of tune
-                    self.start_tune()
+                    if self.state not in ('tuneheader', 'tunebody'):
+                        self.start_tune()
                     self.handle_field_X_tune_number(tune, field_data, line, comment)
                     if self.state not in ('tuneheader', 'tunebody'):
                         self.state = 'tuneheader'
