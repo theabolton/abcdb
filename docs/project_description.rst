@@ -209,7 +209,23 @@ For information on installing ABCdb, see the `README
 Usage
 =====
 
-*To be written.*
+I will assume that the reader is comfortable using typical web applications, and not describe
+every step in detail.
+
+The installation process described in the `README <README.html#installation>`_ creates an 'admin'
+user, and for installations with only one user, it is fine to just use this. If you wish to have
+more than one user, first log in as 'admin', then access the administration console by selecting
+the 'admin' link in the left-margin menu.
+
+To load content into the database, select the 'upload' link. Here you may upload ABC-format files
+from your local machine, or if you are logged in as the administrative user, you may fetch them
+from a remote URL.
+
+Any errors in the imported file will be shown in the upload progress screen. Deduplication is
+performed automatically as part of the upload process.
+
+Songs may be searched for using the 'search' menu link, or browsed via the 'titles' and
+'collections' links.
 
 Architecture
 ============
